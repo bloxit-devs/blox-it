@@ -1,0 +1,23 @@
+{
+    "extends": "@tsconfig/node16",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "rootDir": "src",
+        "outDir": "dist",
+        "incremental": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true
+    },
+    "exclude": [],
+    "include": ["src/**/*.ts"],
+    "ts-node": {
+        "transpileOnly": true,
+        "files": true,
+        "swc": true,
+        "compilerOptions": {
+            "sourceMap": true
+        }
+    }
+}
