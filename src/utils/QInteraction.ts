@@ -11,12 +11,12 @@ import {
     ButtonStyle,
     APIButtonComponentWithCustomId,
     ComponentBuilder,
-    SelectMenuBuilder,
+    StringSelectMenuBuilder,
     ModalBuilder,
     AutocompleteInteraction,
     ButtonInteraction,
     ModalSubmitInteraction,
-    SelectMenuInteraction,
+    StringSelectMenuInteraction,
     AnyComponentBuilder,
     TextInputBuilder
 } from "discord.js";
@@ -88,7 +88,11 @@ export abstract class QInteraction {
      * @param actionRow The action row to add the select menu to
      * @param execute The execute function to run when the options change
      */
-    public addSelectMenu(builder: SelectMenuBuilder, actionRow: string, execute: ComponentExecute<QInteraction.SelectMenu>) {
+    public addSelectMenu(
+        builder: StringSelectMenuBuilder,
+        actionRow: string,
+        execute: ComponentExecute<QInteraction.SelectMenu>
+    ) {
         if (!execute) throw "A select menu must have an execute function!";
         if (!builder.data.custom_id) throw "A select menu must have a custom id!";
 
@@ -181,7 +185,7 @@ export namespace QInteraction {
     export type Chat = ChatInputCommandInteraction;
     export type MessageContext = MessageContextMenuCommandInteraction;
     export type UserContext = UserContextMenuCommandInteraction;
-    export type SelectMenu = SelectMenuInteraction;
+    export type SelectMenu = StringSelectMenuInteraction;
     export type Button = ButtonInteraction;
     export type Autocomplete = AutocompleteInteraction;
     export type ModalSubmit = ModalSubmitInteraction;

@@ -6,7 +6,7 @@ import { PostEvent } from "./events/PostEvent";
 import { config } from "dotenv";
 import path from "path";
 import { Module } from "./QModule";
-import glob from "glob";
+import glob from "fast-glob";
 
 config();
 const IS_DEVELOPMENT = process.env.NODE_ENV === "development" || process.env.TS_NODE_DEV;
@@ -54,7 +54,7 @@ export class QClient extends Client {
 
         return new Promise((resolve) => {
             const translatedFiles: any[] = [];
-            glob(`${dir}/**/*.js`, (err, files) => {
+            glob(`${dir}/**/*.js`).then((files) => {
                 files.forEach(async (file) => {
                     const name = path.parse(file.toString()).name;
                     const data = await import(`${file.toString()}`);
