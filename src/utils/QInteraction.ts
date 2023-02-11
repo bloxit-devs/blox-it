@@ -20,8 +20,9 @@ import {
     AnyComponentBuilder,
     TextInputBuilder
 } from "discord.js";
+import { QClient } from "./QClient";
 
-export type ComponentExecute<T extends QInteraction.Interactions> = (interaction: T) => void;
+export type ComponentExecute<T extends QInteraction.Interactions> = (interaction: T, client: QClient) => void;
 export type CommandBuilders = JSONEncodable<RESTPostAPIApplicationCommandsJSONBody>;
 
 export abstract class QInteraction {

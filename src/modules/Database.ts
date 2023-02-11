@@ -1,9 +1,8 @@
 import { Module } from "../utils/QModule";
-import { Sequelize } from "sequelize-typescript";
-import path from "path";
+import type { PrismaClient } from "@prisma/client";
 
 export class Database extends Module {
-    public sqlize?: Sequelize;
+    public prisma?: PrismaClient;
 
     constructor() {
         super({ exportModule: false });
@@ -16,35 +15,28 @@ export class Database extends Module {
 
         // Load database from env
         try {
-            this.sqlize = new Sequelize({
-                dialect: "sqlite",
-                logging: false,
-                storage: path.join("./", process.env.DB_PATH),
-                models: [path.join(__dirname, "../models/*.ts"), path.join(__dirname, "../models/*.js")]
-            });
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const prismaClient = require("@prisma/client").PrismaClient as typeof PrismaClient;
+            this.prisma = new prismaClient();
         } catch (error) {
             console.warn(`[DB] Failed to load database: ${error}`);
         }
     }
 
     public async init(): Promise<void> {
-        if (!this.sqlize) return;
+        if (!this.prisma) return;
         console.log("[DB] Initialising");
 
         try {
-            await this.sqlize.authenticate();
+            await this.prisma.$connect();
             console.log("[DB] Successfully authenticated");
         } catch (err) {
             console.error(`[DB] Failed to authenticate ${process.env.DB_PATH}: ${err}`);
-            this.sqlize.close();
+            this.prisma.$disconnect();
         }
-
-        await this.sqlize.sync({
-            force: process.env.DB_CLEAR === "true"
-        });
     }
 }
 
 export namespace Database {
-    export type sqlize = Sequelize | undefined;
+    export type prisma = PrismaClient | undefined;
 }

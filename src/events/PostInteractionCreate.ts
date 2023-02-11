@@ -24,7 +24,7 @@ export class PostInteractionCreate extends PostEvent {
                 if (cmd && cmd.components.has("autocomplete")) {
                     const compExec = cmd.components.get("autocomplete");
                     if (!compExec) return;
-                    return compExec(interaction);
+                    return compExec(interaction, client);
                 } else {
                     throw `Autocomplete hit with no function for the command: ${interaction.commandName}`;
                 }
@@ -37,7 +37,7 @@ export class PostInteractionCreate extends PostEvent {
                 if (cmd) {
                     const compExec = cmd.components.get(interaction.customId);
                     if (!compExec) return;
-                    return compExec(interaction);
+                    return compExec(interaction, client);
                 } else {
                     throw `Unknown component hit: ${cmdName} // ${interaction.customId}`;
                 }

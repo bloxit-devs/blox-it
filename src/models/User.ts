@@ -1,38 +1,38 @@
-import { Table, Column, Model, Unique, AllowNull, DataType, Default } from "sequelize-typescript";
+import { Database } from "src/modules/Database";
+import { QClient } from "src/utils/QClient";
 
-@Table({
-    timestamps: false
-})
-export class User extends Model {
-    @Unique
-    @Column(DataType.STRING)
-    discordID!: string;
-
-    @Unique
-    @AllowNull
-    @Column(DataType.INTEGER)
-    robloxID?: number;
-
-    @Default(false)
-    @Column(DataType.BOOLEAN)
-    banned?: boolean;
-}
-
-export async function checkBanned(rbxID: number): Promise<boolean> {
+export async function checkBanned(client: QClient, robloxId: number): Promise<boolean> {
     try {
-        const user = await User.findOne({ where: { robloxID: rbxID } });
-        return (user && user.banned) || false;
+        const { prisma } = client.modules.get("Database") as Database;
+        const user = await prisma?.user.findUnique({ where: { robloxId } });
+        return user?.banned ?? false;
     } catch {
         return false;
     }
 }
 
-export async function linkAccount(discordID: string, rbxID: number): Promise<boolean> {
+export async function linkAccount(client: QClient, discordId: string, robloxId: number): Promise<boolean> {
     try {
-        const [user] = await User.findOrCreate({ where: { discordID: discordID } });
+        const { prisma } = client.modules.get("Database") as Database;
 
-        user.robloxID = rbxID;
-        await user.save();
+        if (!(await prisma?.user.findUnique({ where: { discordId } }))) {
+            prisma?.user.create({
+                data: {
+                    discordId,
+                    robloxId
+                }
+            });
+            return true;
+        }
+
+        prisma?.user.update({
+            where: {
+                discordId
+            },
+            data: {
+                robloxId
+            }
+        });
 
         return true;
     } catch (err) {
@@ -40,11 +40,10 @@ export async function linkAccount(discordID: string, rbxID: number): Promise<boo
     }
 }
 
-export async function unlinkAccount(discordID: string): Promise<boolean> {
+export async function unlinkAccount(client: QClient, discordId: string): Promise<boolean> {
     try {
-        const user = await User.findOne({ where: { discordID: discordID } });
-
-        await user?.destroy();
+        const { prisma } = client.modules.get("Database") as Database;
+        await prisma?.user.delete({ where: { discordId } });
 
         return true;
     } catch (err) {
@@ -52,11 +51,12 @@ export async function unlinkAccount(discordID: string): Promise<boolean> {
     }
 }
 
-export async function getRobloxID(discordID: string): Promise<number | null> {
+export async function getRobloxID(client: QClient, discordId: string): Promise<number | null> {
     try {
-        const user = await User.findOne({ where: { discordID: discordID } });
+        const { prisma } = client.modules.get("Database") as Database;
+        const user = await prisma?.user.findUnique({ where: { discordId } });
 
-        return user?.robloxID ?? null;
+        return user?.robloxId ?? null;
     } catch (err) {
         return null;
     }

@@ -1,5 +1,6 @@
-import { Table, Column, Model, Unique, AllowNull, DataType, PrimaryKey, Default } from "sequelize-typescript";
-import { Op } from "sequelize";
+import { Guild } from "@prisma/client";
+import { Database } from "src/modules/Database";
+import { QClient } from "src/utils/QClient";
 
 /**
  * The role type for certain event based pings
@@ -8,79 +9,21 @@ export type RoleType = "allRole" | "updateRole" | "releaseRole";
 /**
  * The channel type for certain notifications
  */
-export type NotifyChannel = "rbxUpdates" | "rbxReleases";
+export type NotifyChannel = "robloxUpdates" | "robloxReleases";
 
-export type VerificationSettings = {
-    verifyEnabled?: boolean;
-    verifyEmbedID?: string | null;
-    verifiedRole?: string | null;
-    devMemberRole?: string | null;
-    devRegularRole?: string | null;
-    rbxStaffRole?: string | null;
-};
+export type VerificationSettings = Pick<
+    Guild,
+    "verifyEnabled" | "verifyEmbedId" | "verifiedRole" | "devMemberRole" | "devRegularRole" | "robloxStaffRole"
+>;
 
-@Table({
-    timestamps: false
-})
-export class Guild extends Model {
-    @Unique
-    @PrimaryKey
-    @Column(DataType.STRING)
-    guildID!: string;
-
-    /* Devforum Notifier */
-    @AllowNull
-    @Column(DataType.STRING)
-    rbxUpdates?: string | null;
-
-    @AllowNull
-    @Column(DataType.STRING)
-    rbxReleases?: string | null;
-
-    /* Reaction Roles */
-    @AllowNull
-    @Column(DataType.STRING)
-    allRole?: string | null;
-
-    @AllowNull
-    @Column(DataType.STRING)
-    updateRole?: string | null;
-
-    @AllowNull
-    @Column(DataType.STRING)
-    releaseRole?: string | null;
-
-    /* Verification System */
-    @Default(false)
-    @Column(DataType.BOOLEAN)
-    verifyEnabled?: boolean;
-
-    @AllowNull
-    @Column(DataType.STRING)
-    verifyEmbedID?: string | null;
-
-    @AllowNull
-    @Column(DataType.STRING)
-    verifiedRole?: string | null;
-
-    @AllowNull
-    @Column(DataType.STRING)
-    devMemberRole?: string | null;
-
-    @AllowNull
-    @Column(DataType.STRING)
-    devRegularRole?: string | null;
-
-    @AllowNull
-    @Column(DataType.STRING)
-    rbxStaffRole?: string | null;
-}
-
-export async function getGuild(guildID: string | number): Promise<Guild | null> {
+export async function getGuild(client: QClient, guildId: string): Promise<Guild | null> {
     try {
-        const [guild] = await Guild.findOrCreate({
-            where: { guildID: guildID.toString() }
+        const { prisma } = client.modules.get("Database") as Database;
+        const guild = await prisma?.guild.findUnique({
+            where: { guildId }
         });
+
+        if (!guild) return prisma?.guild.create({ data: { guildId } }) ?? null;
 
         return guild;
     } catch (err) {
@@ -90,35 +33,56 @@ export async function getGuild(guildID: string | number): Promise<Guild | null> 
 
 /**
  * Searches the guild table for guilds with atleast one notify channel
- * @returns A table of valid guilds
+ * @returns A table of valId guilds
  */
-export async function getGuildChannels(): Promise<Guild[]> {
-    return Guild.findAll({
-        where: {
-            [Op.or]: {
-                rbxUpdates: { [Op.ne]: null },
-                rbxReleases: { [Op.ne]: null }
+export async function getGuildChannels(client: QClient): Promise<Guild[]> {
+    const { prisma } = client.modules.get("Database") as Database;
+
+    return (
+        prisma?.guild.findMany({
+            where: {
+                OR: {
+                    robloxUpdates: null,
+                    robloxReleases: null
+                }
             }
-        }
-    });
+        }) ?? []
+    );
 }
 
 /**
  * Sets the notifier channels for the specified guild
- * @param guildID The target guild ID
- * @param rbxUpdates The roblox update channel ID
- * @param rbxReleases The roblox release channel ID
+ * @param guildId The target guild Id
+ * @param channelType The type of the channel for the channel id
+ * @param channelId The channel id
  */
-export async function setNotifyChannels(guildID: string | number, channelType: NotifyChannel, channelID: string | null) {
-    const [guild] = await Guild.findOrCreate({
-        where: { guildID: guildID.toString() }
-    });
-
-    // Setting role
-    guild[channelType] = channelID;
+export async function setNotifyChannels(
+    client: QClient,
+    guildId: string,
+    channelType: NotifyChannel,
+    channelId: string | null
+) {
+    const { prisma } = client.modules.get("Database") as Database;
 
     try {
-        await guild.save();
+        if (!(await prisma?.guild.findUnique({ where: { guildId } }))) {
+            await prisma?.guild.create({
+                data: {
+                    guildId,
+                    [channelType]: channelId
+                }
+            });
+            return true;
+        }
+
+        await prisma?.guild.update({
+            where: {
+                guildId
+            },
+            data: {
+                [channelType]: channelId
+            }
+        });
     } catch (err) {
         return false;
     }
@@ -128,24 +92,37 @@ export async function setNotifyChannels(guildID: string | number, channelType: N
 
 /**
  *
- * @param guildID
+ * @param guildId
  * @param roleType
  * @param role
  */
 export async function setNotifyRoles(
-    guildID: string | number,
+    client: QClient,
+    guildId: string,
     roleType: "allRole" | "updateRole" | "releaseRole",
-    role: string | null
+    roleId: string | null
 ) {
-    const [guild] = await Guild.findOrCreate({
-        where: { guildID: guildID.toString() }
-    });
-
-    // Setting role
-    guild[roleType] = role;
+    const { prisma } = client.modules.get("Database") as Database;
 
     try {
-        await guild.save();
+        if (!(await prisma?.guild.findUnique({ where: { guildId } }))) {
+            await prisma?.guild.create({
+                data: {
+                    guildId,
+                    [roleType]: roleId
+                }
+            });
+            return true;
+        }
+
+        await prisma?.guild.update({
+            where: {
+                guildId
+            },
+            data: {
+                [roleType]: roleId
+            }
+        });
     } catch (err) {
         return false;
     }
@@ -153,15 +130,22 @@ export async function setNotifyRoles(
     return true;
 }
 
-export async function updateVerifySettings(guildID: string | number, data: VerificationSettings) {
+export async function updateVerifySettings(client: QClient, guildId: string, data: VerificationSettings) {
+    const { prisma } = client.modules.get("Database") as Database;
     if (Object.keys(data).length === 0) return true;
 
     try {
-        await Guild.findOrCreate({
-            where: { guildID: guildID.toString() }
-        });
+        if (!(await prisma?.guild.findUnique({ where: { guildId } }))) {
+            await prisma?.guild.create({
+                data: {
+                    guildId,
+                    ...data
+                }
+            });
+            return true;
+        }
 
-        await Guild.update(data, { where: { guildID: guildID } });
+        await prisma?.guild.update({ where: { guildId }, data });
     } catch (err) {
         return false;
     }

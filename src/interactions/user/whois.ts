@@ -30,7 +30,7 @@ export class whois extends QInteraction {
 
         let user = null;
         if (dUser) {
-            const userEntry = await getRobloxID(dUser.id);
+            const userEntry = await getRobloxID(client, dUser.id);
             if (!userEntry)
                 return interaction.reply({
                     content: "Failed to get user's Roblox ID!",

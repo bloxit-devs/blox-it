@@ -14,7 +14,7 @@ export class contextWhois extends QInteraction {
     }
 
     public async execute(client: QInteraction.Client, interaction: QInteraction.UserContext) {
-        const rID = await getRobloxID(interaction.targetId);
+        const rID = await getRobloxID(client, interaction.targetId);
         if (!rID)
             return interaction.reply({
                 content: "Could not get user's Roblox ID!",
