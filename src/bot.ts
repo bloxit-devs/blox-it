@@ -1,5 +1,4 @@
 import { QClient } from "./utils/QClient";
-import path from "path";
 
 // Create bot
 const client = new QClient({

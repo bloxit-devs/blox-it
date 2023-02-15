@@ -1,16 +1,12 @@
 import { Module } from "../utils/QModule";
-import Hapi from "@hapi/hapi";
-import Boom from "@hapi/boom";
-import Joi from "joi";
+import { fastify } from "fastify";
 import { checkBanned } from "../models/User";
 import { getCode, purgeOldCodes } from "../models/Code";
 import { QClient } from "src/utils/QClient";
 
 type APIRequest = {
-    payload: {
-        apikey: string;
-        userid: number;
-    };
+    apikey: string;
+    userid: number;
 };
 
 export class VerifyAPI extends Module {
@@ -31,52 +27,57 @@ export class VerifyAPI extends Module {
         }
 
         // Start server
-        const server = Hapi.server({
-            port: process.env.API_PORT || 1984,
-            host: process.env.API_HOST || "0.0.0.0"
-        });
+        const server = fastify();
 
         // Handle root
-        server.route({
+        server.route<{ Body: APIRequest }>({
             method: "POST",
-            path: "/",
-            handler: async (req: APIRequest) => {
-                if (req.payload.apikey !== process.env.API_KEY) {
+            url: "/",
+            schema: {
+                body: {
+                    type: "object",
+                    properties: {
+                        apikey: { type: "string" },
+                        userid: { type: "number" }
+                    }
+                }
+            },
+            handler: async (req) => {
+                if (req.body.apikey !== process.env.API_KEY) {
                     return {
                         statusCode: 401,
                         message: "Invalid API_KEY."
                     };
                 }
 
-                if (await checkBanned(req.payload.userid)) {
+                if (await checkBanned(req.body.userid)) {
                     return {
                         statusCode: 403,
                         message: "You are banned."
                     };
                 }
 
-                const code = await getCode(req.payload.userid);
+                const code = await getCode(req.body.userid);
                 if (code) {
                     return {
                         statusCode: 200,
-                        code: code,
+                        code,
                         message: "Code supplied."
                     };
                 } else {
-                    return Boom.badData("Failed to get code for user!");
-                }
-            },
-            options: {
-                validate: {
-                    payload: Joi.object({
-                        apikey: Joi.string().required(),
-                        userid: Joi.number().required()
-                    })
+                    return {
+                        statusCode: 400,
+                        message: "Failed to get code for user!"
+                    };
                 }
             }
         });
 
-        await server.start();
-        console.log("[VerifyAPI] Started server on %s", server.info.uri);
+        await server
+            .listen({
+                port: parseInt(process.env.API_PORT ?? "1984"),
+                host: process.env.API_HOST ?? "0.0.0.0"
+            })
+            .then((url) => console.log(`[VerifyAPI] Started server on ${url}`));
     }
 }

@@ -5,8 +5,7 @@ import { getGuildChannels } from "../models/Guild";
 import { getRecentRelease, setRecentRelease } from "../models/Bot";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedAuthorOptions, EmbedBuilder, TextChannel } from "discord.js";
 import { config } from "dotenv";
-import { parseDocument } from "htmlparser2";
-import { DomUtils } from "htmlparser2";
+import { parseDocument, DomUtils } from "htmlparser2";
 
 /* Announcements, News/Alerts, Release Notes */
 const CATEGORIES_WATCHING = [36, 193];
@@ -60,7 +59,7 @@ type PostData = {
 /**
  * Type returned by a specific post
  */
-type post = {
+type Post = {
     id: number;
     topic_id: number;
     created_at: string;
@@ -76,7 +75,7 @@ type post = {
  */
 type TopicSummary = {
     post_stream: {
-        posts: post[];
+        posts: Post[];
     };
     details: {
         /**
@@ -115,12 +114,12 @@ type NavElement = {
 /**
  * Supported html entities to be decoded
  */
-type htmlEntities = "nbsp" | "lt" | "gt" | "amp" | "quot" | "apos";
+type HTMLEntities = "nbsp" | "lt" | "gt" | "amp" | "quot" | "apos";
 
 /**
  * Supported html tags
  */
-type htmlTags = "strong" | "b" | "blockquote" | "code" | "i";
+type HTMLTags = "strong" | "b" | "blockquote" | "code" | "i";
 
 /**
  * Decodes html entities such as &amp; into their actual form
@@ -146,11 +145,11 @@ const decodeHTML = (encodedString: string): string => {
         i: "*"
     };
     return encodedString
-        .replace(translate_re, function (match, entity: htmlEntities) {
+        .replace(translate_re, function (match, entity: HTMLEntities) {
             return translateEntities[entity];
         })
         .replace(translate_tag, function (match, tag: string) {
-            const normalisedTag = tag.replace(/([/<>])/g, "") as htmlTags;
+            const normalisedTag = tag.replace(/([/<>])/g, "") as HTMLTags;
             return translateTags[normalisedTag];
         })
         .replace(/&#(\d+);/gi, function (match, numStr) {
@@ -194,7 +193,7 @@ const getAdditionalPostInfo = async (URL: string) => {
         if (!data) return { description: false, author: false };
 
         // Getting the original post
-        const firstPost: post = data.post_stream.posts[0];
+        const firstPost: Post = data.post_stream.posts[0];
         if (!firstPost) return { description: false, author: false };
 
         // Formatting description

@@ -1,7 +1,7 @@
 import { REST, Routes } from "discord.js";
 import { config } from "dotenv";
 import path from "path";
-import glob from "glob";
+import glob from "fast-glob";
 
 config();
 const IS_DEVELOPMENT = process.env.NODE_ENV === "development" || process.env.TS_NODE_DEV;
@@ -20,7 +20,7 @@ const dir = path
     .split(path.sep)
     .join("/");
 
-glob(dir + "/**/*.js", async (err, files) => {
+glob(dir + "/**/*.js").then(async (files) => {
     // eslint-disable-next-line promise/no-promise-in-callback
     const commands = await Promise.all(
         files.map(async (file) => {

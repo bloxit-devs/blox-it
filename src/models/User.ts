@@ -18,16 +18,13 @@ export class User extends Model {
     banned?: boolean;
 }
 
-export function checkBanned(rbxID: number): boolean {
-    User.findOne({ where: { robloxID: rbxID } })
-        .then((user) => {
-            return (user && user.banned) || false;
-        })
-        .catch(() => {
-            return false;
-        });
-
-    return false;
+export async function checkBanned(rbxID: number): Promise<boolean> {
+    try {
+        const user = await User.findOne({ where: { robloxID: rbxID } });
+        return (user && user.banned) || false;
+    } catch {
+        return false;
+    }
 }
 
 export async function linkAccount(discordID: string, rbxID: number): Promise<boolean> {

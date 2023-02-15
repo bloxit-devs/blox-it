@@ -4,11 +4,11 @@ import { Op } from "sequelize";
 /**
  * The role type for certain event based pings
  */
-export type roleType = "allRole" | "updateRole" | "releaseRole";
+export type RoleType = "allRole" | "updateRole" | "releaseRole";
 /**
  * The channel type for certain notifications
  */
-export type notifyChannel = "rbxUpdates" | "rbxReleases";
+export type NotifyChannel = "rbxUpdates" | "rbxReleases";
 
 export type VerificationSettings = {
     verifyEnabled?: boolean;
@@ -109,7 +109,7 @@ export async function getGuildChannels(): Promise<Guild[]> {
  * @param rbxUpdates The roblox update channel ID
  * @param rbxReleases The roblox release channel ID
  */
-export async function setNotifyChannels(guildID: string | number, channelType: notifyChannel, channelID: string | null) {
+export async function setNotifyChannels(guildID: string | number, channelType: NotifyChannel, channelID: string | null) {
     const [guild] = await Guild.findOrCreate({
         where: { guildID: guildID.toString() }
     });
