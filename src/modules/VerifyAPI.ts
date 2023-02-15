@@ -16,11 +16,11 @@ export class VerifyAPI extends Module {
         // Wait for database module to be loaded
         client.on("moduleLoaded", async (name) => {
             if (name !== "Database") return;
-            console.log(`[VerifyAPI] Purged ${await purgeOldCodes(client)} codes.`);
+            console.log(`[VerifyAPI] Purged ${await purgeOldCodes()} codes.`);
         });
     }
 
-    public async init(client: QClient): Promise<void> {
+    public async init(): Promise<void> {
         if (!process.env.API_KEY) {
             console.error("[VerifyAPI] Cannot start VerifyAPI! No API_KEY set in environment!");
             return;
@@ -50,14 +50,14 @@ export class VerifyAPI extends Module {
                     };
                 }
 
-                if (await checkBanned(client, req.body.userid)) {
+                if (await checkBanned(req.body.userid)) {
                     return {
                         statusCode: 403,
                         message: "You are banned."
                     };
                 }
 
-                const code = await getCode(client, req.body.userid);
+                const code = await getCode(req.body.userid);
                 if (code) {
                     return {
                         statusCode: 200,

@@ -13,12 +13,10 @@ import {
     GuildMember
 } from "discord.js";
 import { QInteraction } from "../../utils/QInteraction";
-import { VerificationSettings, updateVerifySettings, getGuild } from "../../models/Guild";
+import { VerificationSettings, updateVerifySettings, getGuild, Guild } from "../../models/Guild";
 import { verifyCode } from "../../models/Code";
 import { getRobloxID, linkAccount, unlinkAccount } from "../../models/User";
 import { Roblox } from "../../modules/Roblox";
-import { Guild } from "@prisma/client";
-import { QClient } from "src/utils/QClient";
 
 export async function removeRoles(guild: Guild, user: GuildMember): Promise<boolean> {
     try {
@@ -27,7 +25,7 @@ export async function removeRoles(guild: Guild, user: GuildMember): Promise<bool
         if (guild?.verifiedRole && user.roles.cache.has(guild?.verifiedRole)) roles.push(guild?.verifiedRole);
         if (guild?.devMemberRole && user.roles.cache.has(guild?.devMemberRole)) roles.push(guild?.devMemberRole);
         if (guild?.devRegularRole && user.roles.cache.has(guild?.devRegularRole)) roles.push(guild?.devRegularRole);
-        if (guild?.robloxStaffRole && user.roles.cache.has(guild?.robloxStaffRole)) roles.push(guild?.robloxStaffRole);
+        if (guild?.rbxStaffRole && user.roles.cache.has(guild?.rbxStaffRole)) roles.push(guild?.rbxStaffRole);
 
         await user.roles.remove(roles, "Verification System");
     } catch (err) {
@@ -37,8 +35,8 @@ export async function removeRoles(guild: Guild, user: GuildMember): Promise<bool
     return true;
 }
 
-export async function updateAccount(client: QClient, guild: Guild, user: GuildMember): Promise<boolean> {
-    const robloxID = await getRobloxID(client, user.id);
+export async function updateAccount(guild: Guild, user: GuildMember): Promise<boolean> {
+    const robloxID = await getRobloxID(user.id);
     if (!robloxID) return false;
 
     const rbx = await Roblox.getUser(robloxID);
@@ -57,7 +55,7 @@ export async function updateAccount(client: QClient, guild: Guild, user: GuildMe
         if (guild?.verifiedRole) roles.push(guild.verifiedRole);
         if (guild?.devMemberRole && rbx?.trustLevel === Roblox.TrustLevel.Member) roles.push(guild.devMemberRole);
         if (guild?.devRegularRole && rbx?.trustLevel === Roblox.TrustLevel.Regular) roles.push(guild.devRegularRole);
-        if (guild?.robloxStaffRole && rbx?.isStaff) roles.push(guild.robloxStaffRole);
+        if (guild?.rbxStaffRole && rbx?.isStaff) roles.push(guild.rbxStaffRole);
 
         await user.roles.add(roles, "Verification System");
     } catch (err) {
@@ -220,11 +218,11 @@ export class verify extends QInteraction {
                 .setCustomId("submitGame")
                 .setTitle("Enter Verification Code")
                 .addComponents(this.getRows("code")),
-            async (interaction: QInteraction.ModalSubmit, client) => {
+            async (interaction: QInteraction.ModalSubmit) => {
                 const rawCode = interaction.fields.getTextInputValue("code");
 
                 if (rawCode.match(/^[0-9]{1,6}$/)) {
-                    const [success, result] = await verifyCode(client, parseInt(rawCode));
+                    const [success, result] = await verifyCode(parseInt(rawCode));
 
                     if (!success) {
                         return interaction.reply({
@@ -233,10 +231,10 @@ export class verify extends QInteraction {
                         });
                     }
 
-                    if (await linkAccount(client, interaction.user.id, result as number)) {
+                    if (await linkAccount(interaction.user.id, result as number)) {
                         const rbx = await Roblox.getUser(result as number);
                         if (!rbx) {
-                            await unlinkAccount(client, interaction.user.id);
+                            await unlinkAccount(interaction.user.id);
                             return interaction.reply({
                                 content: "Could not verify! Please try again!",
                                 ephemeral: true
@@ -244,10 +242,10 @@ export class verify extends QInteraction {
                         }
 
                         const user = interaction.guild?.members.cache.get(interaction.user.id);
-                        const guild = await getGuild(client, interaction.guildId!);
+                        const guild = await getGuild(interaction.guildId!);
 
-                        if (!(guild && user && (await updateAccount(client, guild, user)))) {
-                            await unlinkAccount(client, interaction.user.id);
+                        if (!(guild && user && (await updateAccount(guild, user)))) {
+                            await unlinkAccount(interaction.user.id);
                             return interaction.reply({
                                 content: `Failed to link account! Please try again!`,
                                 ephemeral: true
@@ -361,7 +359,7 @@ export class verify extends QInteraction {
     public async execute(client: QInteraction.Client, interaction: QInteraction.Chat) {
         const subcommandGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
-        const data = {} as VerificationSettings;
+        const data: VerificationSettings = {};
         let message = "";
 
         // Avoiding no guild, it's probably not needed, but it's good to have.
@@ -371,18 +369,18 @@ export class verify extends QInteraction {
             case "role": {
                 switch (subcommand) {
                     case "verified":
-                        data.verifiedRole = interaction.options.getRole("role")?.id ?? null;
+                        data.verifiedRole = interaction.options.getRole("role")?.id;
 
                         message = "Successfuly updated the verified role!";
                         break;
                     case "devforum":
-                        data.devMemberRole = interaction.options.getRole("member")?.id ?? null;
-                        data.devRegularRole = interaction.options.getRole("regular")?.id ?? null;
+                        data.devMemberRole = interaction.options.getRole("member")?.id;
+                        data.devRegularRole = interaction.options.getRole("regular")?.id;
 
                         message = "Successfully updated the dev forum member and regular roles!";
                         break;
                     case "rbxstaff":
-                        data.robloxStaffRole = interaction.options.getRole("role")?.id ?? null;
+                        data.rbxStaffRole = interaction.options.getRole("role")?.id;
 
                         message = "Successfully updated the Roblox staff role!";
                         break;
@@ -392,13 +390,13 @@ export class verify extends QInteraction {
             default: {
                 switch (subcommand) {
                     case "embed": {
-                        const guild = await getGuild(client, interaction.guildId);
+                        const guild = await getGuild(interaction.guildId);
 
                         if (!guild) {
                             message = "Could not get guild data!";
                             break;
                         }
-                        if (guild.verifyEmbedId) {
+                        if (guild.verifyEmbedID) {
                             message =
                                 "An embed already exists, the old one(s) will no longer be updated when the system is enabled/disabled!\n\n";
                         }
@@ -409,7 +407,7 @@ export class verify extends QInteraction {
                                 components: this.getRows<MessageRow>("init")
                             })
                             .then((msg) => {
-                                data.verifyEmbedId = `${msg.channelId}|${msg.id}`;
+                                data.verifyEmbedID = `${msg.channelId}|${msg.id}`;
                                 message += "Successfully sent the embed!";
                             })
                             .catch(() => {
@@ -418,15 +416,15 @@ export class verify extends QInteraction {
                         break;
                     }
                     case "enable": {
-                        const guild = await getGuild(client, interaction.guildId);
+                        const guild = await getGuild(interaction.guildId);
 
                         if (!guild?.verifiedRole) {
                             message = "You need to set a verified role to enable the verification system!";
                             break;
                         }
 
-                        if (guild?.verifyEmbedId) {
-                            const [channelID, msgID] = guild.verifyEmbedId.split("|");
+                        if (guild?.verifyEmbedID) {
+                            const [channelID, msgID] = guild.verifyEmbedID.split("|");
                             const channel = (await interaction.guild?.channels
                                 .fetch(channelID)
                                 .catch(() => null)) as TextBasedChannel;
@@ -455,10 +453,10 @@ export class verify extends QInteraction {
                         break;
                     }
                     case "disable": {
-                        const guild = await getGuild(client, interaction.guildId);
+                        const guild = await getGuild(interaction.guildId);
 
-                        if (guild?.verifyEmbedId) {
-                            const [channelID, msgID] = guild.verifyEmbedId.split("|");
+                        if (guild?.verifyEmbedID) {
+                            const [channelID, msgID] = guild.verifyEmbedID.split("|");
                             const channel = (await interaction.guild?.channels
                                 .fetch(channelID)
                                 .catch(() => null)) as TextBasedChannel;
@@ -492,14 +490,14 @@ export class verify extends QInteraction {
                     }
                     case "forceupdate": {
                         const user = interaction.guild?.members.cache.get(interaction.options.getUser("user", true).id);
-                        const guild = await getGuild(client, interaction.guildId);
+                        const guild = await getGuild(interaction.guildId);
 
                         if (!guild || !user) {
                             message = "Could not get user or guild!";
                             break;
                         }
 
-                        if (!(await updateAccount(client, guild, user))) {
+                        if (!(await updateAccount(guild, user))) {
                             message = "Could not update user!";
                             break;
                         }
@@ -511,7 +509,7 @@ export class verify extends QInteraction {
                         const user = interaction.options.getUser("user", true);
                         const robloxID = interaction.options.getNumber("robloxid", true);
 
-                        if (!(await linkAccount(client, user.id, robloxID))) {
+                        if (!(await linkAccount(user.id, robloxID))) {
                             message = "Could not link user!";
                             break;
                         }
@@ -521,14 +519,14 @@ export class verify extends QInteraction {
                     }
                     case "forceunlink": {
                         const user = interaction.guild?.members.cache.get(interaction.options.getUser("user", true).id);
-                        const guild = await getGuild(client, interaction.guildId);
+                        const guild = await getGuild(interaction.guildId);
 
                         if (!guild || !user) {
                             message = "Could not get user or guild!";
                             break;
                         }
 
-                        if (!((await removeRoles(guild, user)) && (await unlinkAccount(client, user.id)))) {
+                        if (!((await removeRoles(guild, user)) && (await unlinkAccount(user.id)))) {
                             message = "Could not unlink user!";
                             break;
                         }
@@ -542,7 +540,7 @@ export class verify extends QInteraction {
             }
         }
 
-        if (Object.keys(data).length !== 0 && !(await updateVerifySettings(client, interaction.guildId, data))) {
+        if (Object.keys(data).length !== 0 && !(await updateVerifySettings(interaction.guildId, data))) {
             message = "Could not update settings, an error occured!";
         }
 

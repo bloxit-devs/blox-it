@@ -16,7 +16,7 @@ export class unlink extends QInteraction {
 
     public async execute(client: QInteraction.Client, interaction: QInteraction.Chat) {
         const user = interaction.guild?.members.cache.get(interaction.user.id);
-        const guild = await getGuild(client, interaction.guildId!);
+        const guild = await getGuild(interaction.guildId!);
 
         if (!(user && guild)) {
             return interaction.reply({
@@ -25,7 +25,7 @@ export class unlink extends QInteraction {
             });
         }
 
-        if (!((await unlinkAccount(client, interaction.user.id)) && removeRoles(guild, user))) {
+        if (!((await unlinkAccount(interaction.user.id)) && removeRoles(guild, user))) {
             return interaction.reply({
                 content: "Failed to unlink or remove your roles!",
                 ephemeral: true

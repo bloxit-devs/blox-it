@@ -1,39 +1,59 @@
-import { Database } from "src/modules/Database";
-import { QClient } from "src/utils/QClient";
+import { Table, Column, Model, Unique, AllowNull, DataType } from "sequelize-typescript";
+import { Op } from "sequelize";
 
 function randomInt(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-export async function getCode(client: QClient, robloxId: number): Promise<number | null> {
-    try {
-        const { prisma } = client.modules.get("Database") as Database;
+@Table({
+    timestamps: false
+})
+export class Code extends Model {
+    @Unique
+    @Column(DataType.INTEGER)
+    robloxID!: number;
 
-        const entry = await prisma?.code.findUnique({ where: { robloxId } });
+    @Unique
+    @AllowNull
+    @Column(DataType.INTEGER)
+    code?: number;
+
+    @Unique
+    @AllowNull
+    @Column(DataType.STRING)
+    phrase?: string;
+
+    @Column(DataType.DATE)
+    expiry!: Date;
+}
+
+export async function getCode(rbxID: number): Promise<number | null> {
+    try {
+        const entry = await Code.findOne({ where: { robloxID: rbxID } });
 
         if (entry) {
             if (entry.expiry > new Date()) {
-                return entry.code ?? null;
+                return entry.code || null;
             } else {
-                await prisma?.code.delete({ where: { code: entry.code ?? undefined, robloxId } });
+                await entry.destroy();
             }
         }
 
+        let done = false;
         let code = 0;
-        while (await prisma?.code.findUnique({ where: { code } })) {
+        while (!done) {
             code = randomInt(100000, 999999);
+            if (!(await Code.findOne({ where: { code: code } }))) {
+                done = true;
+            }
         }
 
         const date = new Date();
-
         date.setMinutes(date.getMinutes() + 10);
-
-        await prisma?.code.create({
-            data: {
-                robloxId,
-                code,
-                expiry: date
-            }
+        await Code.create({
+            robloxID: rbxID,
+            code: code,
+            expiry: date
         });
 
         return code;
@@ -42,23 +62,24 @@ export async function getCode(client: QClient, robloxId: number): Promise<number
     }
 }
 
-export async function verifyCode(client: QClient, code: number): Promise<[boolean, string | number]> {
-    const { prisma } = client.modules.get("Database") as Database;
-    try {
-        const entry = await prisma?.code.findUnique({ where: { code } });
-
-        if (entry) {
-            try {
-                await prisma?.code.delete({ where: { code } });
-                return entry.expiry > new Date()
-                    ? [true, entry.robloxId]
-                    : [false, "Your code has expired! Please generate a new one."];
-            } catch (err) {
-                return [false, "Failed to verify code, contact a mod!"];
-            }
-        }
-    } catch {
+export async function verifyCode(code: number): Promise<[boolean, string | number]> {
+    const entry = (await Code.findOne({ where: { code: code } }).catch(() => {
         return [false, "Failed to contact DB, contact a mod!"];
+    })) as Code;
+
+    if (entry) {
+        try {
+            if (entry.expiry > new Date()) {
+                const userid = entry.robloxID;
+                await entry.destroy();
+                return [true, userid];
+            } else {
+                await entry.destroy();
+                return [false, "Your code has expired! Please generate a new one."];
+            }
+        } catch (err) {
+            return [false, "Failed to verify code, contact a mod!"];
+        }
     }
 
     return [false, "Invalid code!"];
@@ -68,17 +89,14 @@ export async function verifyCode(client: QClient, code: number): Promise<[boolea
  * Deletes codes that have an expiry date before today
  * @returns The number of rows deleted
  */
-export async function purgeOldCodes(client: QClient): Promise<number> {
-    const { prisma } = client.modules.get("Database") as Database;
-    const oldLen = (await prisma?.code.findMany({}))?.length ?? 0;
-
-    await prisma?.code.deleteMany({
+export async function purgeOldCodes(): Promise<number> {
+    const oldLen = Code.length;
+    await Code.destroy({
         where: {
             expiry: {
-                lt: new Date()
+                [Op.lt]: new Date()
             }
         }
     });
-
-    return oldLen - ((await prisma?.code.findMany({}))?.length ?? 0);
+    return oldLen - Code.length;
 }

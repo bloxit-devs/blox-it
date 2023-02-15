@@ -284,19 +284,19 @@ const createEmbed = async (postData: PostData) => {
  * @returns
  */
 const createPost = async (client: QClient, postData: PostData) => {
-    getGuildChannels(client)
+    getGuildChannels()
         .then((guilds) => {
             guilds.forEach(async (guildInfo) => {
                 // Adding post to cache
                 if (!cachedPosts.includes(postData.id)) cachedPosts.push(postData.id);
 
                 // Getting guilds to post in
-                const guild = await client.guilds.fetch(guildInfo.guildId);
+                const guild = await client.guilds.fetch(guildInfo.guildID);
                 if (!guild) return false;
 
                 // Getting channel id to post to
                 const chosenChannelID =
-                    postData.category_id === Category.release_notes ? guildInfo.robloxReleases : guildInfo.robloxUpdates;
+                    postData.category_id === Category.release_notes ? guildInfo.rbxReleases : guildInfo.rbxUpdates;
                 if (!chosenChannelID) return false;
 
                 // Finding actual channel
@@ -429,7 +429,7 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             if (releaseNumber === undefined) return;
 
             // Checking release number
-            const oldRelease = await getRecentRelease(client, CLIENT_ID);
+            const oldRelease = await getRecentRelease(CLIENT_ID);
             if (oldRelease && oldRelease >= parseInt(releaseNumber)) {
                 releaseNumber = (oldRelease + 1).toString();
 
@@ -449,7 +449,7 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             }
 
             // Setting database
-            setRecentRelease(client, CLIENT_ID, parseInt(releaseNumber));
+            setRecentRelease(CLIENT_ID, parseInt(releaseNumber));
 
             // Posting release
             createPost(client, {

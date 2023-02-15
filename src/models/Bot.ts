@@ -1,37 +1,34 @@
-import { Database } from "src/modules/Database";
-import { QClient } from "src/utils/QClient";
+import { Table, Column, Model, Unique, AllowNull, DataType } from "sequelize-typescript";
 
-export async function getRecentRelease(client: QClient, clientId: string): Promise<number | null> {
-    const { prisma } = client.modules.get("Database") as Database;
+@Table({
+    timestamps: false
+})
+export class Bot extends Model {
+    @Unique
+    @Column(DataType.STRING)
+    clientID!: string;
+
+    @Unique
+    @AllowNull
+    @Column(DataType.INTEGER)
+    recentRelease?: number;
+}
+
+export async function getRecentRelease(clientID: string): Promise<number | null> {
     try {
-        const entry = await prisma?.bot.findUnique({ where: { clientId } });
+        const entry = await Bot.findOne({ where: { clientID: clientID } });
         return entry?.recentRelease ?? 9999;
     } catch (err) {
         return null;
     }
 }
 
-export async function setRecentRelease(client: QClient, clientId: string, release: number) {
-    const { prisma } = client.modules.get("Database") as Database;
+export async function setRecentRelease(clientID: string, release: number) {
     try {
-        if (!(await prisma?.bot.findUnique({ where: { clientId } }))) {
-            await prisma?.bot.create({
-                data: {
-                    clientId,
-                    recentRelease: release
-                }
-            });
-            return true;
-        }
+        const [entry] = await Bot.findOrCreate({ where: { clientID: clientID } });
 
-        prisma?.bot.update({
-            where: {
-                clientId
-            },
-            data: {
-                recentRelease: release
-            }
-        });
+        entry.recentRelease = release;
+        await entry.save();
 
         return true;
     } catch (err) {

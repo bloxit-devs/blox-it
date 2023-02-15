@@ -15,7 +15,7 @@ export class update extends QInteraction {
 
     public async execute(client: QInteraction.Client, interaction: QInteraction.Chat) {
         const user = interaction.guild?.members.cache.get(interaction.user.id);
-        const guild = await getGuild(client, interaction.guildId!);
+        const guild = await getGuild(interaction.guildId!);
 
         if (!(user && guild)) {
             return interaction.reply({
@@ -24,7 +24,7 @@ export class update extends QInteraction {
             });
         }
 
-        if (!(await updateAccount(client, guild, user))) {
+        if (!(await updateAccount(guild, user))) {
             return interaction.reply({
                 content: "Failed to update your username and roles! (Are you verified?)",
                 ephemeral: true
