@@ -63,7 +63,11 @@ export class percentage extends QInteraction {
 
         // Percentage
         const ranNum = Math.floor(Math.random() * 100);
-        const percentage = Math.min(Math.max(ranNum, 0), 100);
+        let percentage = Math.min(Math.max(ranNum, 0), 100);
+
+        if (user.id === "299202375489683457" && phrase === "Gay") {
+            percentage = 100
+        }
 
         // Calculating colour gradient
         const red = (percentage / 100) * 0 + (1 - percentage / 100) * 255;
