@@ -5,4 +5,4 @@
 
 # GitHub Linguist Override
 * linguist-vendored
-src/* linguist-detectable=true
+src/**/*.* linguist-detectable=true
