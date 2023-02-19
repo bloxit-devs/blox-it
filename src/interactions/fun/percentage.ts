@@ -54,7 +54,7 @@ export class percentage extends QInteraction {
                         },
                         {
                             name: "Transgender",
-                            value: "🏳️‍⚧"
+                            value: "🏳️‍⚧️"
                         },
                         {
                             name: "Dumb",
