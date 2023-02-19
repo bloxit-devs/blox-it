@@ -53,6 +53,38 @@ export class percentage extends QInteraction {
                             value: "Attractive"
                         },
                         {
+                            name: "Transgender",
+                            value: "🏳️‍⚧️"
+                        },
+                        {
+                            name: "Dumb",
+                            value: "Dumb"
+                        },
+                        {
+                            name: "Mental",
+                            value: "Mental"
+                        },
+                        {
+                            name: "Nerd",
+                            value: "🤓"
+                        },
+                        {
+                            name: "ADHD",
+                            value: "<a:getreal:940006274693754902>"
+                        },
+                        {
+                            name: "British",
+                            value: "🇬🇧"
+                        },
+                        {
+                            name: "Rizz",
+                            value: "a rizz master"
+                        },
+                        {
+                            name: "Swag",
+                            value: "<a:cool:937421846842843257>"
+                        },
+                        {
                             name: "Turkish",
                             value: "Turkish 🇹🇷"
                         },
