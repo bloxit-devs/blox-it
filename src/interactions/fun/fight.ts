@@ -10,13 +10,13 @@ export class fight extends QInteraction {
                 .addUserOption((opt) =>
                     opt
                     .setName("fighter1")
-                    .setDescription("First user to fight")
+                    .setDescription("first user to fight")
                     .setRequired(true)
                 )
                 .addUserOption((opt) =>
                     opt
                     .setName("fighter2")
-                    .setDescription("Second user to fight")
+                    .setDescription("second user to fight")
                     .setRequired(true)
                 ),
         );
