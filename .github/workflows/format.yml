@@ -1,0 +1,32 @@
+name: Formatting Checks
+
+on:
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
+
+jobs:
+  format:
+    name: Run Linters
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+     - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 'lts/hydrogen'
+          cache: 'yarn'
+
+      - name: Install Node.js dependencies
+        run: yarn install --immutable
+
+      - name: Run linters
+        uses: wearerequired/lint-action@v2
+        with:
+          eslint: true
+          prettier: true
