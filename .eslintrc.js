@@ -3,18 +3,20 @@ module.exports = {
         node: true,
         es2021: true
     },
-    plugins: ["@typescript-eslint", "promise"],
-    extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+    plugins: ["@typescript-eslint", "promise", "prettier"],
+    extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:prettier/recommended"],
     parser: "@typescript-eslint/parser",
-    overrides: [{
-        files: ["*.ts"],
-        parserOptions: {
-            ecmaVersion: "es2022",
-            sourceType: "module",
-            project: ["./tsconfig.json"]
-        },
-    }],
-    
+    overrides: [
+        {
+            files: ["*.ts"],
+            parserOptions: {
+                ecmaVersion: "es2022",
+                sourceType: "module",
+                project: ["./tsconfig.json"]
+            }
+        }
+    ],
+
     rules: {
         "@typescript-eslint/explicit-module-boundary-types": "off",
         "@typescript-eslint/no-extra-semi": "off",
