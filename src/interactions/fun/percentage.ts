@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, GuildMember } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { QInteraction } from "../../utils/QInteraction";
 
 export class percentage extends QInteraction {
