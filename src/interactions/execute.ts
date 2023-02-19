@@ -35,7 +35,8 @@ export class execute extends QInteraction {
         const rawCode = interaction.targetMessage.content;
         const code = /```(?:([\w-]+)\n)?([\s\S]*?)```/gm.exec(rawCode)?.[2] ?? rawCode;
         const child = fork(join(__dirname, "..", "languages", "luau.js"), [code], {
-            silent: true
+            silent: true,
+            timeout: 10_000 /* 10s timeout, in case of stuff like while true do end loops etc */
         });
         const { stdoutEncoded, stderrEncoded } = await childClose(child);
 
@@ -43,7 +44,7 @@ export class execute extends QInteraction {
         if (stdoutEncoded) string += `📝 Logs:\n${stdoutEncoded}\n`;
         if (stderrEncoded) string += `❌ Errors:\n${stderrEncoded}\n`;
         interaction.editReply({
-            content: codeBlock(string),
+            content: codeBlock(string.substring(0, 1993 /* 2000 (max length) - 7 (the length of ```\n```) */)),
             allowedMentions: {
                 parse: []
             }
