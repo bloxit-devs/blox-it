@@ -36,7 +36,7 @@ export class execute extends QInteraction {
         const code = /```(?:([\w-]+)\n)?([\s\S]*?)```/gm.exec(rawCode)?.[2] ?? rawCode;
         const child = fork(join(__dirname, "..", "languages", "luau.js"), [code], {
             silent: true,
-            timeout: 10_000 /* 10s timeout, in case of stuff like while true do end loops etc */
+            timeout: 2_500 /* 2.5s timeout, in case of stuff like while true do loops etc */
         });
         const { stdoutEncoded, stderrEncoded } = await childClose(child);
 
