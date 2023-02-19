@@ -20,6 +20,8 @@
         "dotenv": "^16.0.1",
         "erlpack": "discord/erlpack",
         "get-stream": "^6.0.1",
+        "eslint-config-prettier": "^8.6.0",
+        "eslint-plugin-prettier": "^4.2.1",
         "glob": "^8.0.3",
         "htmlparser2": "^8.0.1",
         "joi": "^17.6.0",
