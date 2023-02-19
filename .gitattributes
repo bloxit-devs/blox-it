@@ -4,5 +4,4 @@
 *.zip binary
 
 # GitHub Linguist Override
-* linguist-vendored
-src/**/*.* linguist-detectable=true
+*.js -linguist-detectable
