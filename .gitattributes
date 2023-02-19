@@ -4,5 +4,5 @@
 *.zip binary
 
 # GitHub Linguist Override
-.yarn/** linguist-vendored
-*.pnp.* linguist-vendored
+* linguist-vendored
+src/* linguist-detectable=true
