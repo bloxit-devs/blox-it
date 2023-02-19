@@ -83,7 +83,7 @@ export class percentage extends QInteraction {
                         {
                             name: "Swag",
                             value: "<a:cool:937421846842843257>"
-                        }
+                        },
                         {
                             name: "Turkish",
                             value: "Turkish 🇹🇷"
