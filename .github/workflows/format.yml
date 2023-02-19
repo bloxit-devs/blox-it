@@ -2,7 +2,6 @@ name: Formatting Checks
 
 on:
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [ "main" ]
 
 jobs:
@@ -13,8 +12,8 @@ jobs:
       contents: read
       security-events: write
     steps:
-     - name: Check out Git repository
-       uses: actions/checkout@v3
+      - name: Check out Git repository
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v1
