@@ -82,7 +82,7 @@ export class percentage extends QInteraction {
                         },
                         {
                             name: "Swag",
-                            value: "<a:cool~1:937421846842843257>"
+                            value: "<a:cool:937421846842843257>"
                         }
                     )
                 )
