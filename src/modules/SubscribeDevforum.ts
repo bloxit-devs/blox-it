@@ -5,7 +5,7 @@ import { getGuildChannels } from "../models/Guild";
 import { getRecentRelease, setRecentRelease } from "../models/Bot";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedAuthorOptions, EmbedBuilder, TextChannel } from "discord.js";
 import { config } from "dotenv";
-import { parseDocument } from "htmlparser2";
+import { parseDocument, DomUtils } from "htmlparser2";
 
 /* Announcements, News/Alerts, Release Notes */
 const CATEGORIES_WATCHING = [36, 193];
