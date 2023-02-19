@@ -35,7 +35,7 @@ export class fight extends QInteraction {
             "Winner winner, chicken dinner.",
             "Sometimes you win, sometimes you lose.",
             "Imagine losing to this guy."
-        ]
+        ];
 
         const embed = new EmbedBuilder()
             .setTitle("It's a fight!")
