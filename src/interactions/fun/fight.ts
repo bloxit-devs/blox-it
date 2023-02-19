@@ -27,15 +27,15 @@ export class fight extends QInteraction {
         const fighter2 = interaction.options.getUser("fighter2");
         const randomWinner = Math.floor(Math.random() * 2 + 1);
 
-        const randomFooters = {
-            1: "We all knew this was going to happen.",
-            2: "I'm not surprised.",
-            3: "The winner was obvious.",
-            4: "Surprising, but not really.",
-            5: "Winner winner, chicken dinner.",
-            6: "Sometimes you win, sometimes you lose.",
-            7: "Imagine losing to this guy.",
-        }
+        const randomFooters = [
+            "We all knew this was going to happen.",
+            "I'm not surprised.",
+            "The winner was obvious.",
+            "Surprising, but not really.",
+            "Winner winner, chicken dinner.",
+            "Sometimes you win, sometimes you lose.",
+            "Imagine losing to this guy."
+        ]
 
         const embed = new EmbedBuilder()
             .setTitle("It's a fight!")
