@@ -41,7 +41,7 @@ export class fight extends QInteraction {
             .setTitle("It's a fight!")
             .setDescription(`After a long battle between ${fighter1} and ${fighter2}...\n ${randomWinner === 1 ? fighter1 : fighter2} has won!`)
             .setColor("RANDOM")
-            .setFooter(randomFooters[Math.floor(Math.random() * Object.keys(randomFooters).length + 1)]);
+            .setFooter(randomFooters[randomFooters[Math.floor(Math.random() * randomFooters.length)]]);
         interaction.reply({ embeds: [embed] });
     }
 }
