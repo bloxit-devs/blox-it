@@ -87,7 +87,7 @@ export class percentage extends QInteraction {
                         {
                             name: "Turkish",
                             value: "Turkish 🇹🇷"
-                        },
+                        }
                     )
                 )
         );
@@ -118,7 +118,7 @@ export class percentage extends QInteraction {
             .setColor([red, green, blue]);
 
         if (phrase === "Turkish 🇹🇷" && percentage >= 50) {
-            embed.setImage('https://media.discordapp.net/attachments/934591528083529738/1060649095741591705/IMG_2292.png');
+            embed.setImage("https://media.discordapp.net/attachments/934591528083529738/1060649095741591705/IMG_2292.png");
         }
 
         // Sending reply

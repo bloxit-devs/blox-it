@@ -1,4 +1,5 @@
 {
   "trailingComma": "none",
-  "parser": "typescript"
+  "parser": "typescript",
+  "endOfLine": "auto"
 }

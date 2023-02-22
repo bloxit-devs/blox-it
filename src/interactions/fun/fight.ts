@@ -7,18 +7,8 @@ export class fight extends QInteraction {
             new SlashCommandBuilder()
                 .setName("fight")
                 .setDescription("Choose two users to fight each other.")
-                .addUserOption((opt) =>
-                    opt
-                    .setName("fighter1")
-                    .setDescription("first user to fight")
-                    .setRequired(true)
-                )
-                .addUserOption((opt) =>
-                    opt
-                    .setName("fighter2")
-                    .setDescription("second user to fight")
-                    .setRequired(true)
-                ),
+                .addUserOption((opt) => opt.setName("fighter1").setDescription("first user to fight").setRequired(true))
+                .addUserOption((opt) => opt.setName("fighter2").setDescription("second user to fight").setRequired(true))
         );
     }
 
@@ -39,9 +29,13 @@ export class fight extends QInteraction {
 
         const embed = new EmbedBuilder()
             .setTitle("It's a fight!")
-            .setDescription(`After a long battle between ${fighter1} and ${fighter2}...\n ${randomWinner === 1 ? fighter1 : fighter2} has won!`)
+            .setDescription(
+                `After a long battle between ${fighter1} and ${fighter2}...\n ${
+                    randomWinner === 1 ? fighter1 : fighter2
+                } has won!`
+            )
             .setColor("Random")
-            .setFooter(randomFooters[Math.floor(Math.random() * randomFooters.length)]);
+            .setFooter({ text: randomFooters[Math.floor(Math.random() * randomFooters.length)] });
         interaction.reply({ embeds: [embed] });
     }
 }
