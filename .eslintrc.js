@@ -18,6 +18,7 @@ module.exports = {
     ],
 
     rules: {
+        endOfLine: 'off',
         "@typescript-eslint/explicit-module-boundary-types": "off",
         "@typescript-eslint/no-extra-semi": "off",
         "@typescript-eslint/no-non-null-assertion": "off",
@@ -35,6 +36,7 @@ module.exports = {
         "promise/avoid-new": "off",
         "promise/no-new-statics": "error",
         "promise/no-return-in-finally": "warn",
-        "promise/valid-params": "warn"
+        "promise/valid-params": "warn",
+        "prettier/prettier": "error"
     }
 };
