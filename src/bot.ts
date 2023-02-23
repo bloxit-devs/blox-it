@@ -3,7 +3,12 @@ import { QClient } from "./utils/QClient";
 
 // Create bot
 const client = new QClient({
-    intents: [GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages, GatewayIntentBits.Guilds],
+    intents: [
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessageReactions
+    ],
     allowedMentions: {
         parse: ["users", "roles"]
     }
