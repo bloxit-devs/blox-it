@@ -1,8 +1,9 @@
+import { GatewayIntentBits } from "discord.js";
 import { QClient } from "./utils/QClient";
 
 // Create bot
 const client = new QClient({
-    intents: ["MessageContent", "GuildMessages", "Guilds"],
+    intents: [GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages, GatewayIntentBits.Guilds],
     allowedMentions: {
         parse: ["users", "roles"]
     }
