@@ -462,7 +462,6 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
         })
         .catch((err) => {
             if (throttleReleases) return;
-            console.log(err);
             console.log(`[ForumNotifier] Failed to retrieve release notes - slowing timer (${err.response.status})`);
             throttleReleases = true;
 
