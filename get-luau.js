@@ -1,4 +1,5 @@
 // @ts-check
+/* eslint-disable @typescript-eslint/no-var-requires */
 const { createWriteStream } = require("node:fs");
 const { join } = require("node:path");
 const { default: axios } = require("axios");
