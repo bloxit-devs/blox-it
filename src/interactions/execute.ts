@@ -44,7 +44,7 @@ export class execute extends QInteraction {
         if (stdoutEncoded) string += `📝 Logs:\n${stdoutEncoded}\n`;
         if (stderrEncoded) string += `❌ Errors:\n${stderrEncoded}\n`;
         interaction.editReply({
-            content: codeBlock(string.substring(0, 1993 /* 2000 (max length) - 7 (the length of ```\n```) */)),
+            content: codeBlock(string.substring(0, 1992 /* 2000 (max length) - 8 (the length of ```\n\n```) */)),
             allowedMentions: {
                 parse: []
             }
