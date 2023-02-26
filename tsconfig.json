@@ -8,10 +8,13 @@
         "resolveJsonModule": true,
         "isolatedModules": true,
         "emitDecoratorMetadata": true,
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "esModuleInterop": true
     },
     "exclude": [],
-    "include": ["src/**/*.ts"],
+    "include": [
+        "src/**/*.ts"
+    ],
     "ts-node": {
         "transpileOnly": true,
         "files": true,
