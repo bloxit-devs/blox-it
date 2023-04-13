@@ -222,6 +222,7 @@ export class verify extends QInteraction {
                 const rawCode = interaction.fields.getTextInputValue("code");
 
                 if (rawCode.match(/^[0-9]{1,6}$/)) {
+                    interaction.deferReply({ ephemeral: true });
                     const [success, result] = await verifyCode(parseInt(rawCode));
 
                     if (!success) {
@@ -235,10 +236,7 @@ export class verify extends QInteraction {
                         const rbx = await Roblox.getUser(result as number);
                         if (!rbx) {
                             await unlinkAccount(interaction.user.id);
-                            return interaction.reply({
-                                content: "Could not verify! Please try again!",
-                                ephemeral: true
-                            });
+                            return interaction.editReply("Could not verify! Please try again!");
                         }
 
                         const user = interaction.guild?.members.cache.get(interaction.user.id);
@@ -246,21 +244,12 @@ export class verify extends QInteraction {
 
                         if (!(guild && user && (await updateAccount(guild, user)))) {
                             await unlinkAccount(interaction.user.id);
-                            return interaction.reply({
-                                content: `Failed to link account! Please try again!`,
-                                ephemeral: true
-                            });
+                            return interaction.reply("Failed to link account! Please try again!");
                         }
 
-                        return interaction.reply({
-                            content: `Successfully linked account!`,
-                            ephemeral: true
-                        });
+                        return interaction.reply("Successfully linked account!");
                     } else {
-                        return interaction.reply({
-                            content: "Failed to link account! Please contact a mod!",
-                            ephemeral: true
-                        });
+                        return interaction.reply("Failed to link account! Please contact a mod!");
                     }
                 } else {
                     return interaction.reply({
