@@ -226,10 +226,7 @@ export class verify extends QInteraction {
                     const [success, result] = await verifyCode(parseInt(rawCode));
 
                     if (!success) {
-                        return interaction.reply({
-                            content: result as string,
-                            ephemeral: true
-                        });
+                        return interaction.editReply(result as string);
                     }
 
                     if (await linkAccount(interaction.user.id, result as number)) {
@@ -244,10 +241,10 @@ export class verify extends QInteraction {
 
                         if (!(guild && user && (await updateAccount(guild, user)))) {
                             await unlinkAccount(interaction.user.id);
-                            return interaction.reply("Failed to link account! Please try again!");
+                            return interaction.editReply("Failed to link account! Please try again!");
                         }
 
-                        return interaction.reply("Successfully linked account!");
+                        return interaction.editReply("Successfully linked account!");
                     } else {
                         return interaction.reply("Failed to link account! Please contact a mod!");
                     }
