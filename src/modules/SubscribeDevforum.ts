@@ -383,8 +383,16 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
         })
         .catch((err) => {
             if (throttleForum) return;
-            console.log(`[ForumNotifier] Failed to retrieve devforum posts - slowing timer (${err.response.status})`);
             throttleForum = true;
+            if (err.response) {
+                console.log(
+                    `[ForumNotifier] Failed to retrieve devforum posts - server responded with ${err.response.status}: (${err.response.data})`
+                );
+            } else if (err.request) {
+                console.log(`[ForumNotifier] Failed to retrieve devforum posts - no response: (${err.request})`);
+            } else {
+                console.log(`[ForumNotifier] Failed to retrieve devforum posts - generic error: (${err.message})`);
+            }
 
             /* Clear interval */
             clearInterval(forumIntervalID);
@@ -461,13 +469,21 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             });
         })
         .catch((err) => {
-            if (throttleReleases) return;
-            console.log(err);
-            console.log(`[ForumNotifier] Failed to retrieve release notes - slowing timer (${err.response.status})`);
-            throttleReleases = true;
+            if (err.response) {
+                console.log(
+                    `[ForumNotifier] Failed to retrieve release notes - server responded with ${err.response.status}: (${err.response.data})`
+                );
+            } else if (err.request) {
+                console.log(`[ForumNotifier] Failed to retrieve release notes - no response: (${err.request})`);
+            } else {
+                console.log(`[ForumNotifier] Failed to retrieve release notes - generic error: (${err.message})`);
+            }
 
             // Get new build id
             getNextBuildID(module);
+
+            if (throttleReleases) return;
+            throttleReleases = true;
 
             /* Clear interval */
             clearInterval(releaseIntervalID);
