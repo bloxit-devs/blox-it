@@ -367,15 +367,7 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
             // Handling invalid result
             if (!result.data) return;
             if (result.status !== 200) return;
-
-            // Disabling timer throttling
-            if (throttleForum) {
-                throttleForum = false;
-                clearInterval(forumIntervalID);
-                forumIntervalID = undefined;
-                module.init(client);
-                return;
-            }
+            throttleForum = false;
 
             // Remove oldest post from cache if reached max
             if (cachedPosts.length > 10) cachedPosts.shift();
@@ -384,6 +376,7 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
         .catch((err) => {
             if (throttleForum) return;
             throttleForum = true;
+
             if (err.response) {
                 console.log(
                     `[ForumNotifier] Failed to retrieve devforum posts - server responded with ${err.response.status}: (${err.response.data})`
@@ -393,12 +386,6 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
             } else {
                 console.log(`[ForumNotifier] Failed to retrieve devforum posts - generic error: (${err.message})`);
             }
-
-            /* Clear interval */
-            clearInterval(forumIntervalID);
-            forumIntervalID = undefined;
-            module.init(client);
-            return;
         });
 };
 
@@ -417,6 +404,7 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             // Handling invalid result
             if (!result.data) return;
             if (result.status !== 200) return;
+            throttleReleases = false;
 
             // Getting release paths
             const navigation: NavElement[] = result.data.pageProps.data.navigation;
@@ -460,17 +448,14 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
                 created_at: new Date().toISOString(),
                 category_id: Category.release_notes
             });
-
-            // Disabling timer throttling
-            if (throttleReleases) {
-                throttleReleases = false;
-                clearInterval(forumIntervalID);
-                forumIntervalID = undefined;
-                module.init(client);
-                return;
-            }
         })
         .catch((err: AxiosError) => {
+            if (throttleReleases) {
+                getNextBuildID(module);
+                return;
+            }
+            throttleReleases = true;
+
             if (err.response) {
                 console.log(
                     `[ForumNotifier] Failed to retrieve release notes - server responded with ${err.response.status})`
@@ -480,18 +465,6 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             } else {
                 console.log(`[ForumNotifier] Failed to retrieve release notes - generic error: (${err.message})`);
             }
-
-            // Get new build id
-            getNextBuildID(module);
-
-            if (throttleReleases) return;
-            throttleReleases = true;
-
-            /* Clear interval */
-            clearInterval(releaseIntervalID);
-            releaseIntervalID = undefined;
-            module.init(client);
-            return;
         });
 };
 
