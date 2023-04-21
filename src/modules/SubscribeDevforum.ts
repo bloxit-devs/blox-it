@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { QClient } from "../utils/QClient";
 import { Module } from "../utils/QModule";
 import { getGuildChannels } from "../models/Guild";
@@ -403,7 +403,9 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
 };
 
 /**
- *
+ * Performs a get request on the create site for release notes,
+ * uses the Next BuildID to get the site json for categories to determine
+ * if a new release note is available on the 'current category' link
  */
 const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
     // Checking Client
@@ -415,15 +417,6 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             // Handling invalid result
             if (!result.data) return;
             if (result.status !== 200) return;
-
-            // Disabling timer throttling
-            if (throttleReleases) {
-                throttleReleases = false;
-                clearInterval(forumIntervalID);
-                forumIntervalID = undefined;
-                module.init(client);
-                return;
-            }
 
             // Getting release paths
             const navigation: NavElement[] = result.data.pageProps.data.navigation;
@@ -467,11 +460,20 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
                 created_at: new Date().toISOString(),
                 category_id: Category.release_notes
             });
+
+            // Disabling timer throttling
+            if (throttleReleases) {
+                throttleReleases = false;
+                clearInterval(forumIntervalID);
+                forumIntervalID = undefined;
+                module.init(client);
+                return;
+            }
         })
-        .catch((err) => {
+        .catch((err: AxiosError) => {
             if (err.response) {
                 console.log(
-                    `[ForumNotifier] Failed to retrieve release notes - server responded with ${err.response.status}: (${err.response.data})`
+                    `[ForumNotifier] Failed to retrieve release notes - server responded with ${err.response.status})`
                 );
             } else if (err.request) {
                 console.log(`[ForumNotifier] Failed to retrieve release notes - no response: (${err.request})`);
@@ -491,6 +493,15 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             module.init(client);
             return;
         });
+};
+
+/**
+ * @param callback method called on the schedule
+ * @param getTime method called to get the timeout
+ */
+const runScheduledCheck = (callback: () => number) => {
+    const timeout = callback();
+    setTimeout(runScheduledCheck, timeout, callback);
 };
 
 /**
@@ -515,20 +526,16 @@ export class SubscribeDevforum extends Module {
     public async init(client: QClient): Promise<void> {
         if (forumIntervalID && releaseIntervalID) throw "There is already a subscription for the devforum";
 
-        // Setup roblox updates notifier
-        if (!forumIntervalID) {
-            const updatesTimer = throttleForum ? 5 * 1000 * 60 : 1 * 1000 * 60; // Throttled: 5 minutes, Regular: 1 minute
-            forumIntervalID = setInterval(pollDevforum, updatesTimer, this, client);
+        runScheduledCheck(() => {
             pollDevforum(this, client);
-            console.log("[ForumNotifier] Setup Forum Timer");
-        }
+            return throttleForum ? 5 * 1000 * 60 : 1 * 1000 * 60;
+        });
+        console.log("[ForumNotifier] Setup Forum Timer");
 
-        // Setup roblox releases notifier
-        if (!releaseIntervalID) {
-            const releaseTimer = throttleReleases ? 5 * 1000 * 60 : 1 * 1000 * 60; // Throttled: 30 minutes, Regular: 15 minutes
-            releaseIntervalID = setInterval(pollReleaseNotes, releaseTimer, this, client);
+        runScheduledCheck(() => {
             pollReleaseNotes(this, client);
-            console.log("[ForumNotifier] Setup Release Timer");
-        }
+            return throttleReleases ? 5 * 1000 * 60 : 1 * 1000 * 60;
+        });
+        console.log("[ForumNotifier] Setup Release Timer");
     }
 }
