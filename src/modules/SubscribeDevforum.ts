@@ -22,8 +22,6 @@ const CLIENT_ID = IS_DEVELOPMENT ? process.env.DEV_CLIENT_ID : process.env.CLIEN
 const cachedPosts: number[] = [];
 let throttleForum = false;
 let throttleReleases = false;
-let forumIntervalID: NodeJS.Timer | undefined;
-let releaseIntervalID: NodeJS.Timer | undefined;
 
 /**
  * The category ID enum
@@ -497,8 +495,6 @@ export class SubscribeDevforum extends Module {
     }
 
     public async init(client: QClient): Promise<void> {
-        if (forumIntervalID && releaseIntervalID) throw "There is already a subscription for the devforum";
-
         runScheduledCheck(() => {
             pollDevforum(this, client);
             return throttleForum ? 5 * 1000 * 60 : 1 * 1000 * 60;
