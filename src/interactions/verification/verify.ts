@@ -222,7 +222,7 @@ export class verify extends QInteraction {
                 const rawCode = interaction.fields.getTextInputValue("code");
 
                 if (rawCode.match(/^[0-9]{1,6}$/)) {
-                    interaction.deferReply({ ephemeral: true });
+                    await interaction.deferReply({ ephemeral: true });
                     const [success, result] = await verifyCode(parseInt(rawCode));
 
                     if (!success) {
@@ -246,7 +246,7 @@ export class verify extends QInteraction {
 
                         return interaction.editReply("Successfully linked account!");
                     } else {
-                        return interaction.reply("Failed to link account! Please contact a mod!");
+                        return interaction.editReply("Failed to link account! Please contact a mod!");
                     }
                 } else {
                     return interaction.reply({
@@ -276,17 +276,11 @@ export class verify extends QInteraction {
                 .setTitle("Enter Your Username")
                 .addComponents(this.getRows("username")),
             async (interaction: QInteraction.ModalSubmit) => {
+                await interaction.deferReply({ ephemeral: true });
                 const user = await Roblox.getUserByName(interaction.fields.getTextInputValue("username"));
-                if (!user)
-                    return interaction.reply({
-                        content: "Invalid username!",
-                        ephemeral: true
-                    });
+                if (!user) return interaction.editReply("Invalid username!");
 
-                return interaction.reply({
-                    content: "This is currently not implemented!",
-                    ephemeral: true
-                });
+                return interaction.editReply("This is currently not implemented!");
             }
         );
 
@@ -350,7 +344,7 @@ export class verify extends QInteraction {
 
         // Avoiding no guild, it's probably not needed, but it's good to have.
         if (!interaction.guildId) return;
-        interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
 
         switch (subcommandGroup) {
             case "role": {
