@@ -128,7 +128,7 @@ const handleURIStatus = (client: QClient, endpointName: string, statusCode: numb
     if (endpointStatus === Status.Unknown) return;
 
     const historyEntry = EndpointHistory[endpointName];
-    if (historyEntry === undefined) {
+    if (historyEntry === undefined && endpointStatus === Status.Online) {
         EndpointHistory[endpointName] = endpointStatus;
         return;
     }
