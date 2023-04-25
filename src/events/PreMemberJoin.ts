@@ -1,16 +1,16 @@
 import { GuildMember } from "discord.js";
-import { QEvent } from "src/utils/events/BaseEvent";
-import { PreEvent } from "src/utils/events/PreEvent";
-import { updateAccount } from "src/interactions/verification/verify";
-import { getGuild } from "src/models/Guild";
+import { QEvent } from "../utils/events/BaseEvent";
+import { PreEvent } from "../utils/events/PreEvent";
+import { updateAccount } from "../interactions/verification/verify";
+import { getGuild } from "../models/Guild";
 
 export class PreMemberJoin extends PreEvent {
     public constructor() {
         super("guildMemberAdd");
     }
 
-    public async execute(client: QEvent.QClient, member: GuildMember) {
-        console.log("%s has joined", member.displayName);
+    public async execute(client: QEvent.QClient, members: GuildMember[]) {
+        const member = members[0];
 
         // Getting joined guild record
         const guild = await getGuild(member.guild.id);
