@@ -104,6 +104,7 @@ export class notifier extends QInteraction {
 
         // Avoiding no guild
         if (!interaction.guildId) return;
+        interaction.deferReply({ ephemeral: true });
 
         // Getting the set function
         const updateNotifier: any = subcommand === "channel" ? setNotifyChannels : setNotifyRoles;
@@ -114,18 +115,12 @@ export class notifier extends QInteraction {
         switch (subcommandgroup) {
             case "add":
                 updateNotifier(interaction.guildId, type, ID);
-                await interaction.reply({
-                    content: `Successfully added notifier ${subcommand} for **${type}** to ${result}`,
-                    ephemeral: true
-                });
+                await interaction.editReply(`Successfully added notifier ${subcommand} for **${type}** to ${result}`);
                 break;
 
             case "remove":
                 updateNotifier(interaction.guild, type, null);
-                await interaction.reply({
-                    content: `Successfully removed notifier ${subcommand} for **${type}**`,
-                    ephemeral: true
-                });
+                await interaction.editReply(`Successfully removed notifier ${subcommand} for **${type}**`);
                 break;
         }
     }
