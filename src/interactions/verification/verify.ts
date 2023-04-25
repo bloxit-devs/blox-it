@@ -350,6 +350,7 @@ export class verify extends QInteraction {
 
         // Avoiding no guild, it's probably not needed, but it's good to have.
         if (!interaction.guildId) return;
+        interaction.deferReply({ ephemeral: true });
 
         switch (subcommandGroup) {
             case "role": {
@@ -530,9 +531,6 @@ export class verify extends QInteraction {
             message = "Could not update settings, an error occured!";
         }
 
-        return interaction.reply({
-            content: message,
-            ephemeral: true
-        });
+        return interaction.editReply(message);
     }
 }
