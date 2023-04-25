@@ -14,7 +14,7 @@ export class contextWhois extends QInteraction {
     }
 
     public async execute(client: QInteraction.Client, interaction: QInteraction.UserContext) {
-        interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
 
         // Find Roblox ID
         const rID = await getRobloxID(interaction.targetId);

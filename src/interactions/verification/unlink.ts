@@ -16,7 +16,7 @@ export class unlink extends QInteraction {
 
     public async execute(client: QInteraction.Client, interaction: QInteraction.Chat) {
         const user = interaction.guild?.members.cache.get(interaction.user.id);
-        interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
 
         // Get guild from database
         const guild = await getGuild(interaction.guildId!);

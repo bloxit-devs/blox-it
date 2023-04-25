@@ -30,7 +30,7 @@ export class whois extends QInteraction {
         }
 
         // Defer reply as we are accessing potentially slow systems (database)
-        interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
 
         let user = null;
 

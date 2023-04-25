@@ -104,7 +104,7 @@ export class notifier extends QInteraction {
 
         // Avoiding no guild
         if (!interaction.guildId) return;
-        interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
 
         // Getting the set function
         const updateNotifier: any = subcommand === "channel" ? setNotifyChannels : setNotifyRoles;
