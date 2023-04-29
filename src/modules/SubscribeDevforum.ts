@@ -412,35 +412,38 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             // Getting relese note
             const releaseNotes: DocElement | undefined = resources.find((element) => element.title === "Release Notes");
             const currentRelease = releaseNotes?.section.find((element) => element.title === "Current Release");
-            let releaseNumber = currentRelease?.path?.split("-").pop();
+            const releaseNumber = currentRelease?.path?.split("-").pop();
             if (releaseNumber === undefined) return;
 
             // Checking release number
             const oldRelease = await getRecentRelease(CLIENT_ID);
-            if (oldRelease && oldRelease >= parseInt(releaseNumber)) {
-                releaseNumber = (oldRelease + 1).toString();
-
-                // Attempt to check if next release is available
-                let data;
-                try {
-                    // eslint-disable-next-line prefer-const
-                    data = await axios.get(
-                        `https://create.roblox.com/docs/resources/release-note/Release-Note-for-${releaseNumber}`
-                    );
-                } catch (e) {
-                    return;
-                }
-
-                // Return if not
-                if (!data || data.status !== 200) return;
+            const parsedReleaseNum = parseInt(releaseNumber);
+            if (!oldRelease || (oldRelease && oldRelease >= 9999)) {
+                setRecentRelease(CLIENT_ID, parsedReleaseNum - 1);
+            } else if (oldRelease && oldRelease >= parsedReleaseNum) {
+                return;
             }
 
+            // Attempt to check if next release is available
+            let data;
+            try {
+                // eslint-disable-next-line prefer-const
+                data = await axios.get(
+                    `https://create.roblox.com/docs/resources/release-note/Release-Note-for-${releaseNumber}`
+                );
+            } catch (e) {
+                return;
+            }
+
+            // Return if we couldn't find the release note
+            if (!data || data.status !== 200) return;
+
             // Setting database
-            setRecentRelease(CLIENT_ID, parseInt(releaseNumber));
+            setRecentRelease(CLIENT_ID, parsedReleaseNum);
 
             // Posting release
             createPost(client, {
-                id: parseInt(releaseNumber),
+                id: parsedReleaseNum,
                 fancy_title: `Release Notes for ${releaseNumber}`,
                 image_url: DEFAULT_IMAGE,
                 created_at: new Date().toISOString(),
