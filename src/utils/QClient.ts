@@ -144,8 +144,9 @@ export class QClient extends Client {
             if (this.listeners(evnt).length > 0) return;
             this.on(evnt, (...args: any[]) => {
                 let newArgs: QEvent.EventResult = args;
+
                 if (callbackTable.pre && callbackTable.pre.execute) {
-                    newArgs = callbackTable.pre.execute(this, newArgs);
+                    newArgs = callbackTable.pre.execute(this, ...newArgs);
                     if (!newArgs) return;
                 }
 
