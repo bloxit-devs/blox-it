@@ -9,9 +9,7 @@ export class PreMemberJoin extends PreEvent {
         super("guildMemberAdd");
     }
 
-    public async execute(client: QEvent.QClient, members: GuildMember[]) {
-        const member = members[0];
-
+    public async execute(client: QEvent.QClient, member: GuildMember) {
         // Getting joined guild record
         const guild = await getGuild(member.guild.id);
         if (!guild) return false;
