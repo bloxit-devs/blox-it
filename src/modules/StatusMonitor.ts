@@ -2,13 +2,19 @@ import axios, { AxiosError } from "axios";
 import { Module } from "../utils/QModule";
 import { getGuildChannels } from "../models/Guild";
 import { QClient } from "../utils/QClient";
-import { EmbedBuilder, TextChannel } from "discord.js";
+import { EmbedBuilder, HexColorString, TextChannel } from "discord.js";
 
 enum Status {
     "Online",
     "Degraded",
     "Down",
     "Unknown"
+}
+
+interface StatusResponse {
+    StatusCode: number;
+    ResponseTime: number;
+    ResponseMessage: string;
 }
 
 type Endpoint = { system: string; apis: { [name: string]: string } };
@@ -37,27 +43,45 @@ const assertFullfilled = <T>(item: PromiseSettledResult<T>): item is PromiseFulf
     return item.status === "fulfilled";
 };
 
-const createEmbed = (endpointName: string, status: Status) => {
-    const readableStatus = Status[status];
-    let statusDescriptive: string;
+/**
+ * Constructs the status embed
+ * @param endpointName The name of the endpoint
+ * @param status The statuscode of the endpoint
+ * @returns The embedbuilder
+ */
+const createEmbed = (endpointName: string, response: StatusResponse) => {
+    const status = convertStatusCode(response.StatusCode);
+    let embedDescription: string;
+    let embedColour: HexColorString;
     switch (status) {
         case Status.Online:
-            statusDescriptive = "has improved performance.";
+            embedDescription = "has improved performance.";
+            embedColour = "#00FF00";
             break;
         case Status.Degraded:
-            statusDescriptive = "has degraded performance.";
+            embedDescription = "has degraded performance.";
+            embedColour = "#FFFF00";
             break;
         case Status.Down:
-            statusDescriptive = "is experiencing an outage.";
+            embedDescription = "is experiencing an outage.";
+            embedColour = "#FF0000";
             break;
         default:
-            statusDescriptive = "has unknown status.";
+            embedDescription = "has unknown status.";
+            embedColour = "#000000";
             break;
     }
 
     return new EmbedBuilder()
-        .setTitle(`\`${endpointName} Api\` is ${readableStatus}.`)
-        .setDescription(`${endpointName} ${statusDescriptive}`)
+        .setAuthor({ name: "Blox-it" })
+        .setTitle(`\`${endpointName} Api\` is ${Status[status]}.`)
+        .setDescription(`${endpointName} ${embedDescription}`)
+        .setColor(embedColour)
+        .addFields(
+            { name: "Response Time", value: `\`\`\`${response.ResponseTime}ms\`\`\``, inline: true },
+            { name: "Status Code", value: `\`\`\`${response.StatusCode}\`\`\``, inline: true },
+            { name: "Response Message", value: `\`\`\`${response.ResponseMessage}\`\`\`` }
+        )
         .setFooter({ text: "Posted by Blox-it" })
         .setTimestamp(new Date());
 };
@@ -65,9 +89,9 @@ const createEmbed = (endpointName: string, status: Status) => {
 /**
  * Takes an endpoint name and creates a readable announcement for its status using the Status enum
  * @param endpointName The name of the endpoint
- * @param status
+ * @param status The status code of the endpoint
  */
-const announceApiStatus = (client: QClient, endpointName: string, status: Status) => {
+const announceApiStatus = (client: QClient, endpointName: string, response: StatusResponse) => {
     getGuildChannels()
         .then((guilds) => {
             guilds.forEach(async (guildInfo) => {
@@ -86,7 +110,7 @@ const announceApiStatus = (client: QClient, endpointName: string, status: Status
 
                 // Posting message
                 const message = await channel.send({
-                    embeds: [createEmbed(endpointName, status)]
+                    embeds: [createEmbed(endpointName, response)]
                     //allowedMentions: { roles: validatedRoles as string[] }
                 });
                 if (message.crosspostable) message.crosspost();
@@ -123,19 +147,20 @@ const convertStatusCode = (statusCode: number): Status => {
  * @param endpointName The string name of the endpoint
  * @param statusCode The status code the endpoint returned
  */
-const handleURIStatus = (client: QClient, endpointName: string, statusCode: number) => {
-    const endpointStatus = convertStatusCode(statusCode);
-    if (endpointStatus === Status.Unknown) return;
+const handleURIStatus = (client: QClient, endpointName: string, response: StatusResponse) => {
+    const status = convertStatusCode(response.StatusCode);
+    if (status === Status.Unknown) return;
 
     const historyEntry = EndpointHistory[endpointName];
-    if (historyEntry === undefined && endpointStatus === Status.Online) {
-        EndpointHistory[endpointName] = endpointStatus;
+    if (historyEntry === undefined && status === Status.Online) {
+        EndpointHistory[endpointName] = status;
+        announceApiStatus(client, endpointName, response);
         return;
     }
 
-    if (historyEntry === endpointStatus) return;
-    EndpointHistory[endpointName] = endpointStatus;
-    announceApiStatus(client, endpointName, endpointStatus);
+    if (historyEntry === status) return;
+    EndpointHistory[endpointName] = status;
+    announceApiStatus(client, endpointName, response);
 };
 
 /**
@@ -144,20 +169,36 @@ const handleURIStatus = (client: QClient, endpointName: string, statusCode: numb
  */
 const checkEndpoints = async (client: QClient, endpointSet: Endpoint) => {
     const results = Object.entries(endpointSet.apis).map(([name, uri]) => {
-        return new Promise<[string, number]>((resolve, reject) => {
+        return new Promise<[string, StatusResponse]>((resolve, reject) => {
             axios
                 .get(uri)
                 .then((res) => {
-                    resolve([name, res.status]);
+                    resolve([
+                        name,
+                        {
+                            StatusCode: res.status,
+                            ResponseMessage: res.statusText,
+                            ResponseTime: 0
+                        }
+                    ]);
                 })
                 .catch((err: AxiosError) => {
-                    reject([name, err.status]);
+                    reject([
+                        name,
+                        {
+                            StatusCode: err.status,
+                            ResponseMessage: err.response?.statusText ?? "Unhandled Exception",
+                            ResponseTime: 0
+                        }
+                    ]);
                 });
         });
     });
 
     const settledResults = await Promise.allSettled(results);
-    settledResults.filter(assertFullfilled<[string, number]>).forEach((res) => handleURIStatus(client, ...res.value));
+    settledResults
+        .filter(assertFullfilled<[string, StatusResponse]>)
+        .forEach((res) => handleURIStatus(client, ...res.value));
 };
 
 /**
