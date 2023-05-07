@@ -50,6 +50,19 @@ export class Guild extends Model {
     @Column(DataType.STRING)
     releaseRole?: string | null;
 
+    /* Starboard */
+    @AllowNull
+    @Column(DataType.STRING)
+    starboardChannel?: string | null;
+
+    @AllowNull
+    @Column(DataType.BOOLEAN)
+    allowSelfReact?: boolean | null;
+
+    @AllowNull
+    @Column(DataType.NUMBER)
+    minReactions?: number | null;
+
     /* Verification System */
     @Default(false)
     @Column(DataType.BOOLEAN)
