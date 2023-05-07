@@ -3,7 +3,6 @@ import { Module } from "../utils/QModule";
 import { getGuildChannels } from "../models/Guild";
 import { QClient } from "../utils/QClient";
 import { EmbedBuilder, HexColorString, TextChannel } from "discord.js";
-import { start } from "repl";
 
 enum Status {
     "Online",
@@ -241,9 +240,12 @@ export class StatusMonitor extends Module {
             return response;
         });
 
-        // Call init method
-        console.log("[StatusMonitor] Initialising");
-        this.init(client);
+        // Wait for database module to be loaded
+        client.on("moduleLoaded", (name) => {
+            if (name !== "Database") return;
+            console.log("[StatusMonitor] Initialising");
+            this.init(client);
+        });
     }
 
     public async init(client: QClient): Promise<void> {
