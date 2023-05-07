@@ -3,6 +3,7 @@ import { Module } from "../utils/QModule";
 import { getGuildChannels } from "../models/Guild";
 import { QClient } from "../utils/QClient";
 import { EmbedBuilder, HexColorString, TextChannel } from "discord.js";
+import { start } from "repl";
 
 enum Status {
     "Online",
@@ -74,8 +75,9 @@ const createEmbed = (endpointName: string, response: StatusResponse) => {
 
     return new EmbedBuilder()
         .setAuthor({ name: "Blox-it" })
-        .setTitle(`\`${endpointName} Api\` is ${Status[status]}.`)
-        .setDescription(`${endpointName} ${embedDescription}`)
+        .setTitle(`\`${endpointName} API\` is ${Status[status]}.`)
+        .setDescription(`${endpointName} API ${embedDescription}`)
+        .setImage(`https://httpcats.com/${response.StatusCode}.jpg`)
         .setColor(embedColour)
         .addFields(
             { name: "Response Time", value: `\`\`\`${response.ResponseTime}ms\`\`\``, inline: true },
@@ -122,20 +124,28 @@ const announceApiStatus = (client: QClient, endpointName: string, response: Stat
 };
 
 /**
- *
- * @param statusCode
+ * Converts a status code into the status enum
+ * @param statusCode The numerical status code
  * @returns
  */
 const convertStatusCode = (statusCode: number): Status => {
     switch (statusCode) {
         case 200:
             return Status.Online;
+        case 408:
         case 429:
+        case 444:
             return Status.Degraded;
         case 500:
         case 502:
         case 503:
         case 504:
+        case 521:
+        case 522:
+        case 523:
+        case 524:
+        case 598:
+        case 599:
             return Status.Down;
         default:
             return Status.Unknown;
@@ -154,7 +164,6 @@ const handleURIStatus = (client: QClient, endpointName: string, response: Status
     const historyEntry = EndpointHistory[endpointName];
     if (historyEntry === undefined && status === Status.Online) {
         EndpointHistory[endpointName] = status;
-        announceApiStatus(client, endpointName, response);
         return;
     }
 
@@ -178,7 +187,7 @@ const checkEndpoints = async (client: QClient, endpointSet: Endpoint) => {
                         {
                             StatusCode: res.status,
                             ResponseMessage: res.statusText,
-                            ResponseTime: 0
+                            ResponseTime: res.config.headers["X-Request-Duration"] ?? 0
                         }
                     ]);
                 })
@@ -188,7 +197,7 @@ const checkEndpoints = async (client: QClient, endpointSet: Endpoint) => {
                         {
                             StatusCode: err.status,
                             ResponseMessage: err.response?.statusText ?? "Unhandled Exception",
-                            ResponseTime: 0
+                            ResponseTime: err.response?.config.headers["X-Request-Duration"] ?? 0
                         }
                     ]);
                 });
@@ -219,11 +228,22 @@ export class StatusMonitor extends Module {
     constructor(client: QClient) {
         super({ exportModule: false, autoInit: false });
 
-        client.on("moduleLoaded", (name) => {
-            if (name !== "Database") return;
-            console.log("[StatusMonitor] Initialising");
-            this.init(client);
+        // Add axios interceptors
+        axios.interceptors.request.use((config) => {
+            config.headers["X-Request-Duration"] = new Date().getTime();
+            return config;
         });
+
+        axios.interceptors.response.use((response) => {
+            const startTime = response.config.headers["X-Request-Duration"] as number;
+            const endTime = new Date().getTime();
+            response.config.headers["X-Request-Duration"] = endTime - startTime;
+            return response;
+        });
+
+        // Call init method
+        console.log("[StatusMonitor] Initialising");
+        this.init(client);
     }
 
     public async init(client: QClient): Promise<void> {
