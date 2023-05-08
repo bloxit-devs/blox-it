@@ -39,7 +39,7 @@ const EndpointHistory = {} as { [endpoint: string]: Status };
  * Helper method to assert if a set of promises is fulfilled
  * @param item The settled promise result
  */
-const assertFullfilled = <T>(item: PromiseSettledResult<T>): item is PromiseFulfilledResult<T> => {
+const isFulfilled = <T>(item: PromiseSettledResult<T>): item is PromiseFulfilledResult<T> => {
     return item.status === "fulfilled";
 };
 
@@ -204,9 +204,7 @@ const checkEndpoints = async (client: QClient, endpointSet: Endpoint) => {
     });
 
     const settledResults = await Promise.allSettled(results);
-    settledResults
-        .filter(assertFullfilled<[string, StatusResponse]>)
-        .forEach((res) => handleURIStatus(client, ...res.value));
+    settledResults.filter(isFulfilled<[string, StatusResponse]>).forEach((res) => handleURIStatus(client, ...res.value));
 };
 
 /**
