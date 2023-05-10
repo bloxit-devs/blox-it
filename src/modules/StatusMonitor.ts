@@ -35,6 +35,8 @@ const ApiEndpoints = [
 
 const EndpointHistory = {} as { [endpoint: string]: Status };
 
+const ResponseTimeThresholdMS = 1250;
+
 /**
  * Helper method to assert if a set of promises is fulfilled
  * @param item The settled promise result
@@ -134,11 +136,11 @@ const convertStatusCode = (statusCode: number): Status => {
         case 408:
         case 429:
         case 444:
+        case 504:
             return Status.Degraded;
         case 500:
         case 502:
         case 503:
-        case 504:
         case 521:
         case 522:
         case 523:
@@ -157,9 +159,16 @@ const convertStatusCode = (statusCode: number): Status => {
  * @param statusCode The status code the endpoint returned
  */
 const handleURIStatus = (client: QClient, endpointName: string, response: StatusResponse) => {
-    const status = convertStatusCode(response.StatusCode);
+    // Check status
+    let status = convertStatusCode(response.StatusCode);
     if (status === Status.Unknown) return;
 
+    // Check response times
+    if (status === Status.Online) {
+        status = response.ResponseTime > ResponseTimeThresholdMS ? Status.Degraded : status;
+    }
+
+    // Checking past status
     const historyEntry = EndpointHistory[endpointName];
     if (historyEntry === undefined && status === Status.Online) {
         EndpointHistory[endpointName] = status;
