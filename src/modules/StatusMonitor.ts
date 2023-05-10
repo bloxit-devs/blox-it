@@ -13,9 +13,18 @@ enum Status {
 
 interface StatusResponse {
     StatusCode: number;
+    Status?: Status;
     ResponseTime: number;
     ResponseMessage: string;
+    Endpoint: string;
 }
+
+interface HandledResponse {
+    ShouldPost: boolean;
+    Response: StatusResponse;
+}
+
+type GroupedResponses = Array<Array<StatusResponse>>;
 
 type Endpoint = { system: string; apis: { [name: string]: string } };
 
@@ -51,7 +60,7 @@ const isFulfilled = <T>(item: PromiseSettledResult<T>): item is PromiseFulfilled
  * @param status The statuscode of the endpoint
  * @returns The embedbuilder
  */
-const createEmbed = (endpointName: string, response: StatusResponse) => {
+const createEmbed = (response: StatusResponse) => {
     const status = convertStatusCode(response.StatusCode);
     let embedDescription: string;
     let embedColour: HexColorString;
@@ -76,8 +85,8 @@ const createEmbed = (endpointName: string, response: StatusResponse) => {
 
     return new EmbedBuilder()
         .setAuthor({ name: "Blox-it" })
-        .setTitle(`\`${endpointName} API\` is ${Status[status]}.`)
-        .setDescription(`${endpointName} API ${embedDescription}`)
+        .setTitle(`\`${response.Endpoint} API\` is ${Status[status]}.`)
+        .setDescription(`${response.Endpoint} API ${embedDescription}`)
         .setImage(`https://httpcats.com/${response.StatusCode}.jpg`)
         .setColor(embedColour)
         .addFields(
@@ -90,11 +99,12 @@ const createEmbed = (endpointName: string, response: StatusResponse) => {
 };
 
 /**
- * Takes an endpoint name and creates a readable announcement for its status using the Status enum
- * @param endpointName The name of the endpoint
- * @param status The status code of the endpoint
+ * Takes an array of endpoints and outputs them as one bulk message, should be used to group similar status messages
+ * @param client The bot
+ * @param statusGroup The grouping these responses belong to
+ * @param responses The responses that are part of the group
  */
-const announceApiStatus = (client: QClient, endpointName: string, response: StatusResponse) => {
+const announceApiStatus = (client: QClient, statusGroup: Status, responses: Array<StatusResponse>) => {
     getGuildChannels()
         .then((guilds) => {
             guilds.forEach(async (guildInfo) => {
@@ -113,7 +123,7 @@ const announceApiStatus = (client: QClient, endpointName: string, response: Stat
 
                 // Posting message
                 const message = await channel.send({
-                    embeds: [createEmbed(endpointName, response)]
+                    embeds: responses.map((response) => createEmbed(response))
                     //allowedMentions: { roles: validatedRoles as string[] }
                 });
                 if (message.crosspostable) message.crosspost();
@@ -154,30 +164,34 @@ const convertStatusCode = (statusCode: number): Status => {
 };
 
 /**
- * Handles an endpoint name and its status code
- * @param endpointName The string name of the endpoint
- * @param statusCode The status code the endpoint returned
+ * Checks an endpoint response and returns a handled response containing the input response and if it should post
+ * @param response The endpoint response object
  */
-const handleURIStatus = (client: QClient, endpointName: string, response: StatusResponse) => {
+const getHandledResponse = (response: StatusResponse): HandledResponse => {
     // Check status
-    let status = convertStatusCode(response.StatusCode);
-    if (status === Status.Unknown) return;
+    response.Status = convertStatusCode(response.StatusCode);
+    const handledResponse: HandledResponse = {
+        ShouldPost: true,
+        Response: response
+    };
+
+    if (response.Status === Status.Unknown) handledResponse.ShouldPost = false;
 
     // Check response times
-    if (status === Status.Online) {
-        status = response.ResponseTime > ResponseTimeThresholdMS ? Status.Degraded : status;
+    if (response.Status === Status.Online) {
+        response.Status = response.ResponseTime > ResponseTimeThresholdMS ? Status.Degraded : response.Status;
     }
 
     // Checking past status
-    const historyEntry = EndpointHistory[endpointName];
-    if (historyEntry === undefined && status === Status.Online) {
-        EndpointHistory[endpointName] = status;
-        return;
+    const historyEntry = EndpointHistory[response.Endpoint];
+    if (historyEntry === undefined && response.Status === Status.Online) {
+        EndpointHistory[response.Endpoint] = response.Status;
+        handledResponse.ShouldPost = false;
     }
 
-    if (historyEntry === status) return;
-    EndpointHistory[endpointName] = status;
-    announceApiStatus(client, endpointName, response);
+    if (historyEntry === response.Status) handledResponse.ShouldPost = false;
+    EndpointHistory[response.Endpoint] = response.Status;
+    return handledResponse;
 };
 
 /**
@@ -186,34 +200,43 @@ const handleURIStatus = (client: QClient, endpointName: string, response: Status
  */
 const checkEndpoints = async (client: QClient, endpointSet: Endpoint) => {
     const results = Object.entries(endpointSet.apis).map(([name, uri]) => {
-        return new Promise<[string, StatusResponse]>((resolve, reject) => {
+        return new Promise<StatusResponse>((resolve, reject) => {
             axios
                 .get(uri)
                 .then((res) => {
-                    resolve([
-                        name,
-                        {
-                            StatusCode: res.status,
-                            ResponseMessage: res.statusText,
-                            ResponseTime: res.config.headers["X-Request-Duration"] ?? 0
-                        }
-                    ]);
+                    resolve({
+                        StatusCode: res.status,
+                        ResponseMessage: res.statusText,
+                        ResponseTime: res.config.headers["X-Request-Duration"] ?? 0,
+                        Endpoint: name
+                    });
                 })
                 .catch((err: AxiosError) => {
-                    reject([
-                        name,
-                        {
-                            StatusCode: err.status,
-                            ResponseMessage: err.response?.statusText ?? "Unhandled Exception",
-                            ResponseTime: err.response?.config.headers["X-Request-Duration"] ?? 0
-                        }
-                    ]);
+                    reject({
+                        StatusCode: err.status,
+                        ResponseMessage: err.response?.statusText ?? "Unhandled Exception",
+                        ResponseTime: err.response?.config.headers["X-Request-Duration"] ?? 0,
+                        Endpoint: name
+                    });
                 });
         });
     });
 
+    // Getting results and grouping them by status
     const settledResults = await Promise.allSettled(results);
-    settledResults.filter(isFulfilled<[string, StatusResponse]>).forEach((res) => handleURIStatus(client, ...res.value));
+    const groupedResponses = settledResults
+        .filter(isFulfilled<StatusResponse>)
+        .map((res) => getHandledResponse(res.value))
+        .filter((res) => res.ShouldPost)
+        .reduce((group, res) => {
+            if (res.Response.Status === undefined) return group;
+            group[res.Response.Status] = group[res.Response.Status] || [];
+            group[res.Response.Status].push(res.Response);
+            return group;
+        }, [] as GroupedResponses);
+
+    // Announcing grouped status
+    groupedResponses.forEach((responses, group) => announceApiStatus(client, group, responses));
 };
 
 /**
