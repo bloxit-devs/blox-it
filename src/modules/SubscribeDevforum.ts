@@ -1,11 +1,11 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { QClient } from "../utils/QClient";
 import { Module } from "../utils/QModule";
 import { getGuildChannels } from "../models/Guild";
 import { getRecentRelease, setRecentRelease } from "../models/Bot";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedAuthorOptions, EmbedBuilder, TextChannel } from "discord.js";
 import { config } from "dotenv";
-import { parseDocument } from "htmlparser2";
+import { parseDocument, DomUtils } from "htmlparser2";
 
 /* Announcements, News/Alerts, Release Notes */
 const CATEGORIES_WATCHING = [36, 193];
@@ -22,8 +22,6 @@ const CLIENT_ID = IS_DEVELOPMENT ? process.env.DEV_CLIENT_ID : process.env.CLIEN
 const cachedPosts: number[] = [];
 let throttleForum = false;
 let throttleReleases = false;
-let forumIntervalID: NodeJS.Timer | undefined;
-let releaseIntervalID: NodeJS.Timer | undefined;
 
 /**
  * The category ID enum
@@ -367,15 +365,7 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
             // Handling invalid result
             if (!result.data) return;
             if (result.status !== 200) return;
-
-            // Disabling timer throttling
-            if (throttleForum) {
-                throttleForum = false;
-                clearInterval(forumIntervalID);
-                forumIntervalID = undefined;
-                module.init(client);
-                return;
-            }
+            throttleForum = false;
 
             // Remove oldest post from cache if reached max
             if (cachedPosts.length > 10) cachedPosts.shift();
@@ -383,19 +373,24 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
         })
         .catch((err) => {
             if (throttleForum) return;
-            console.log(`[ForumNotifier] Failed to retrieve devforum posts - slowing timer (${err.response.status})`);
             throttleForum = true;
 
-            /* Clear interval */
-            clearInterval(forumIntervalID);
-            forumIntervalID = undefined;
-            module.init(client);
-            return;
+            if (err.response) {
+                console.log(
+                    `[ForumNotifier] Failed to retrieve devforum posts - server responded with ${err.response.status}: (${err.response.data})`
+                );
+            } else if (err.request) {
+                console.log(`[ForumNotifier] Failed to retrieve devforum posts - no response: (${err.request})`);
+            } else {
+                console.log(`[ForumNotifier] Failed to retrieve devforum posts - generic error: (${err.message})`);
+            }
         });
 };
 
 /**
- *
+ * Performs a get request on the create site for release notes,
+ * uses the Next BuildID to get the site json for categories to determine
+ * if a new release note is available on the 'current category' link
  */
 const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
     // Checking Client
@@ -407,15 +402,7 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             // Handling invalid result
             if (!result.data) return;
             if (result.status !== 200) return;
-
-            // Disabling timer throttling
-            if (throttleReleases) {
-                throttleReleases = false;
-                clearInterval(forumIntervalID);
-                forumIntervalID = undefined;
-                module.init(client);
-                return;
-            }
+            throttleReleases = false;
 
             // Getting release paths
             const navigation: NavElement[] = result.data.pageProps.data.navigation;
@@ -425,56 +412,70 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             // Getting relese note
             const releaseNotes: DocElement | undefined = resources.find((element) => element.title === "Release Notes");
             const currentRelease = releaseNotes?.section.find((element) => element.title === "Current Release");
-            let releaseNumber = currentRelease?.path?.split("-").pop();
+            const releaseNumber = currentRelease?.path?.split("-").pop();
             if (releaseNumber === undefined) return;
 
             // Checking release number
             const oldRelease = await getRecentRelease(CLIENT_ID);
-            if (oldRelease && oldRelease >= parseInt(releaseNumber)) {
-                releaseNumber = (oldRelease + 1).toString();
-
-                // Attempt to check if next release is available
-                let data;
-                try {
-                    // eslint-disable-next-line prefer-const
-                    data = await axios.get(
-                        `https://create.roblox.com/docs/resources/release-note/Release-Note-for-${releaseNumber}`
-                    );
-                } catch (e) {
-                    return;
-                }
-
-                // Return if not
-                if (!data || data.status !== 200) return;
+            const parsedReleaseNum = parseInt(releaseNumber);
+            if (!oldRelease || (oldRelease && oldRelease >= 9999)) {
+                setRecentRelease(CLIENT_ID, parsedReleaseNum - 1);
+            } else if (oldRelease && oldRelease >= parsedReleaseNum) {
+                return;
             }
 
+            // Attempt to check if next release is available
+            let data;
+            try {
+                // eslint-disable-next-line prefer-const
+                data = await axios.get(
+                    `https://create.roblox.com/docs/resources/release-note/Release-Note-for-${releaseNumber}`
+                );
+            } catch (e) {
+                return;
+            }
+
+            // Return if we couldn't find the release note
+            if (!data || data.status !== 200) return;
+
             // Setting database
-            setRecentRelease(CLIENT_ID, parseInt(releaseNumber));
+            setRecentRelease(CLIENT_ID, parsedReleaseNum);
 
             // Posting release
             createPost(client, {
-                id: parseInt(releaseNumber),
+                id: parsedReleaseNum,
                 fancy_title: `Release Notes for ${releaseNumber}`,
                 image_url: DEFAULT_IMAGE,
                 created_at: new Date().toISOString(),
                 category_id: Category.release_notes
             });
         })
-        .catch((err) => {
-            if (throttleReleases) return;
-            console.log(err);
-            console.log(`[ForumNotifier] Failed to retrieve release notes - slowing timer (${err.response.status})`);
+        .catch((err: AxiosError) => {
+            if (throttleReleases) {
+                getNextBuildID(module);
+                return;
+            }
             throttleReleases = true;
 
-            // Get new build id
-            getNextBuildID(module);
-
-            /* Clear interval */
-            clearInterval(releaseIntervalID);
-            releaseIntervalID = undefined;
-            module.init(client);
-            return;
+            if (err.response) {
+                console.log(
+                    `[ForumNotifier] Failed to retrieve release notes - server responded with ${err.response.status})`
+                );
+            } else if (err.request) {
+                console.log(`[ForumNotifier] Failed to retrieve release notes - no response: (${err.request})`);
+            } else {
+                console.log(`[ForumNotifier] Failed to retrieve release notes - generic error: (${err.message})`);
+            }
         });
+};
+
+/**
+ * @param callback method called on the schedule
+ * @param getTime method called to get the timeout
+ */
+const runScheduledCheck = (callback: () => number) => {
+    const timeout = callback();
+    setTimeout(runScheduledCheck, timeout, callback);
 };
 
 /**
@@ -497,22 +498,16 @@ export class SubscribeDevforum extends Module {
     }
 
     public async init(client: QClient): Promise<void> {
-        if (forumIntervalID && releaseIntervalID) throw "There is already a subscription for the devforum";
-
-        // Setup roblox updates notifier
-        if (!forumIntervalID) {
-            const updatesTimer = throttleForum ? 5 * 1000 * 60 : 1 * 1000 * 60; // Throttled: 5 minutes, Regular: 1 minute
-            forumIntervalID = setInterval(pollDevforum, updatesTimer, this, client);
+        runScheduledCheck(() => {
             pollDevforum(this, client);
-            console.log("[ForumNotifier] Setup Forum Timer");
-        }
+            return throttleForum ? 5 * 1000 * 60 : 1 * 1000 * 60;
+        });
+        console.log("[ForumNotifier] Setup Forum Timer");
 
-        // Setup roblox releases notifier
-        if (!releaseIntervalID) {
-            const releaseTimer = throttleReleases ? 5 * 1000 * 60 : 1 * 1000 * 60; // Throttled: 30 minutes, Regular: 15 minutes
-            releaseIntervalID = setInterval(pollReleaseNotes, releaseTimer, this, client);
+        runScheduledCheck(() => {
             pollReleaseNotes(this, client);
-            console.log("[ForumNotifier] Setup Release Timer");
-        }
+            return throttleReleases ? 5 * 1000 * 60 : 1 * 1000 * 60;
+        });
+        console.log("[ForumNotifier] Setup Release Timer");
     }
 }

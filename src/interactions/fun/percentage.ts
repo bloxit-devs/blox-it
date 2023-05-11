@@ -51,6 +51,42 @@ export class percentage extends QInteraction {
                         {
                             name: "Attractiveness",
                             value: "Attractive"
+                        },
+                        {
+                            name: "Transgender",
+                            value: "🏳️‍⚧️"
+                        },
+                        {
+                            name: "Dumb",
+                            value: "Dumb"
+                        },
+                        {
+                            name: "Mental",
+                            value: "Mental"
+                        },
+                        {
+                            name: "Nerd",
+                            value: "🤓"
+                        },
+                        {
+                            name: "ADHD",
+                            value: "<a:getreal:940006274693754902>"
+                        },
+                        {
+                            name: "British",
+                            value: "🇬🇧"
+                        },
+                        {
+                            name: "Rizz",
+                            value: "a rizz master"
+                        },
+                        {
+                            name: "Swag",
+                            value: "<a:cool:937421846842843257>"
+                        },
+                        {
+                            name: "Turkish",
+                            value: "Turkish 🇹🇷"
                         }
                     )
                 )
@@ -80,6 +116,10 @@ export class percentage extends QInteraction {
             )
             .setThumbnail(user.avatarURL())
             .setColor([red, green, blue]);
+
+        if (phrase === "Turkish 🇹🇷" && percentage >= 50) {
+            embed.setImage("https://media.discordapp.net/attachments/934591528083529738/1060649095741591705/IMG_2292.png");
+        }
 
         // Sending reply
         interaction.reply({

@@ -14,23 +14,18 @@ export class contextWhois extends QInteraction {
     }
 
     public async execute(client: QInteraction.Client, interaction: QInteraction.UserContext) {
+        await interaction.deferReply({ ephemeral: true });
+
+        // Find Roblox ID
         const rID = await getRobloxID(interaction.targetId);
-        if (!rID)
-            return interaction.reply({
-                content: "Could not get user's Roblox ID!",
-                ephemeral: true
-            });
+        if (!rID) return interaction.editReply("Could not get user's Roblox ID!");
 
+        // Get User from Database
         const user = await Roblox.getUser(rID);
-        if (!user)
-            return interaction.reply({
-                content: "Could not get user's Roblox user data!",
-                ephemeral: true
-            });
+        if (!user) return interaction.editReply("Could not get user's Roblox user data!");
 
-        return interaction.reply({
-            embeds: [await Roblox.generateEmbed(user)],
-            ephemeral: true
+        return interaction.editReply({
+            embeds: [await Roblox.generateEmbed(user)]
         });
     }
 }

@@ -222,23 +222,18 @@ export class verify extends QInteraction {
                 const rawCode = interaction.fields.getTextInputValue("code");
 
                 if (rawCode.match(/^[0-9]{1,6}$/)) {
+                    await interaction.deferReply({ ephemeral: true });
                     const [success, result] = await verifyCode(parseInt(rawCode));
 
                     if (!success) {
-                        return interaction.reply({
-                            content: result as string,
-                            ephemeral: true
-                        });
+                        return interaction.editReply(result as string);
                     }
 
                     if (await linkAccount(interaction.user.id, result as number)) {
                         const rbx = await Roblox.getUser(result as number);
                         if (!rbx) {
                             await unlinkAccount(interaction.user.id);
-                            return interaction.reply({
-                                content: "Could not verify! Please try again!",
-                                ephemeral: true
-                            });
+                            return interaction.editReply("Could not verify! Please try again!");
                         }
 
                         const user = interaction.guild?.members.cache.get(interaction.user.id);
@@ -246,21 +241,12 @@ export class verify extends QInteraction {
 
                         if (!(guild && user && (await updateAccount(guild, user)))) {
                             await unlinkAccount(interaction.user.id);
-                            return interaction.reply({
-                                content: `Failed to link account! Please try again!`,
-                                ephemeral: true
-                            });
+                            return interaction.editReply("Failed to link account! Please try again!");
                         }
 
-                        return interaction.reply({
-                            content: `Successfully linked account!`,
-                            ephemeral: true
-                        });
+                        return interaction.editReply("Successfully linked account!");
                     } else {
-                        return interaction.reply({
-                            content: "Failed to link account! Please contact a mod!",
-                            ephemeral: true
-                        });
+                        return interaction.editReply("Failed to link account! Please contact a mod!");
                     }
                 } else {
                     return interaction.reply({
@@ -290,17 +276,11 @@ export class verify extends QInteraction {
                 .setTitle("Enter Your Username")
                 .addComponents(this.getRows("username")),
             async (interaction: QInteraction.ModalSubmit) => {
+                await interaction.deferReply({ ephemeral: true });
                 const user = await Roblox.getUserByName(interaction.fields.getTextInputValue("username"));
-                if (!user)
-                    return interaction.reply({
-                        content: "Invalid username!",
-                        ephemeral: true
-                    });
+                if (!user) return interaction.editReply("Invalid username!");
 
-                return interaction.reply({
-                    content: "This is currently not implemented!",
-                    ephemeral: true
-                });
+                return interaction.editReply("This is currently not implemented!");
             }
         );
 
@@ -364,6 +344,7 @@ export class verify extends QInteraction {
 
         // Avoiding no guild, it's probably not needed, but it's good to have.
         if (!interaction.guildId) return;
+        await interaction.deferReply({ ephemeral: true });
 
         switch (subcommandGroup) {
             case "role": {
@@ -544,9 +525,6 @@ export class verify extends QInteraction {
             message = "Could not update settings, an error occured!";
         }
 
-        return interaction.reply({
-            content: message,
-            ephemeral: true
-        });
+        return interaction.editReply(message);
     }
 }

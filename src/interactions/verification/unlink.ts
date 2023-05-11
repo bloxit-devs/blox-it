@@ -16,27 +16,24 @@ export class unlink extends QInteraction {
 
     public async execute(client: QInteraction.Client, interaction: QInteraction.Chat) {
         const user = interaction.guild?.members.cache.get(interaction.user.id);
+        await interaction.deferReply({ ephemeral: true });
+
+        // Get guild from database
         const guild = await getGuild(interaction.guildId!);
 
+        // Verifying if auser and guild are specified
         if (!(user && guild)) {
-            return interaction.reply({
-                content: "Could not unlink your account! Failed to get user or guild.",
-                ephemeral: true
-            });
+            return interaction.editReply("Could not unlink your account! Failed to get user or guild.");
         }
 
+        // Attempt to unlink account and remove roles
         if (!((await unlinkAccount(interaction.user.id)) && removeRoles(guild, user))) {
-            return interaction.reply({
-                content: "Failed to unlink or remove your roles!",
-                ephemeral: true
-            });
+            return interaction.editReply("Failed to unlink or remove your roles!");
         }
 
+        // Remove nickname
         await user.setNickname(null).catch(() => null);
 
-        return interaction.reply({
-            content: "Successfully unlinked your account!",
-            ephemeral: true
-        });
+        return interaction.editReply("Successfully unlinked your account!");
     }
 }

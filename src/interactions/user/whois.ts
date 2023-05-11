@@ -21,6 +21,7 @@ export class whois extends QInteraction {
         const rID = interaction.options.getNumber("id");
         const rUsername = interaction.options.getString("username");
 
+        // Option constraints
         if (interaction.options.data.length !== 1) {
             return interaction.reply({
                 content: "You must only specify one option!",
@@ -28,32 +29,31 @@ export class whois extends QInteraction {
             });
         }
 
+        // Defer reply as we are accessing potentially slow systems (database)
+        await interaction.deferReply({ ephemeral: true });
+
         let user = null;
+
+        // Get from roblox discord user
         if (dUser) {
             const userEntry = await getRobloxID(dUser.id);
-            if (!userEntry)
-                return interaction.reply({
-                    content: "Failed to get user's Roblox ID!",
-                    ephemeral: true
-                });
+            if (!userEntry) return interaction.editReply("Failed to get user's Roblox ID!");
 
             user = await Roblox.getUser(userEntry);
         }
 
+        // Get from roblox id
         if (rID) user = await Roblox.getUser(rID);
 
+        // Get from roblox username
         if (rUsername) user = await Roblox.getUserByName(rUsername);
 
         if (!user) {
-            return interaction.reply({
-                content: "Failed to resolve user!",
-                ephemeral: true
-            });
+            return interaction.editReply("Failed to resolve user!");
         }
 
-        return interaction.reply({
-            embeds: [Roblox.generateEmbed(user)],
-            ephemeral: true
+        return interaction.editReply({
+            embeds: [Roblox.generateEmbed(user)]
         });
     }
 }

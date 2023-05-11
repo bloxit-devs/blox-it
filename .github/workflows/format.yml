@@ -1,19 +1,27 @@
 name: Formatting Checks
 
 on:
-  pull_request:
-    branches: [ "main" ]
+  pull_request_target:
+    branches:
+      - main
+
+permissions:
+  checks: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   format:
     name: Run Linters
     runs-on: ubuntu-latest
-    permissions:
-      checks: write
-      contents: write
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -30,3 +38,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           eslint: true
           prettier: true
+          continue_on_error: false
+          prettier_extensions: "ts"
