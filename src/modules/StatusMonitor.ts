@@ -32,12 +32,18 @@ const ApiEndpoints = [
     {
         system: "Roblox",
         apis: {
-            Avatar: "https://avatar.roblox.com/",
             "2FA": "https://twostepverification.roblox.com/",
-            Thumbnails: "https://thumbnails.roblox.com/",
-            Groups: "https://groups.roblox.com/",
+            Avatar: "https://avatar.roblox.com/",
+            Badges: "https://badges.roblox.com/",
+            Contacts: "https://contacts.roblox.com/",
+            Develop: "https://develop.roblox.com/",
             Economy: "https://economy.roblox.com/",
-            Develop: "https://develop.roblox.com/"
+            Friends: "https://friends.roblox.com/",
+            GameJoin: "http://gamejoin.roblox.com/",
+            Groups: "https://groups.roblox.com/",
+            Inventory: "https://inventory.roblox.com/",
+            Thumbnails: "https://thumbnails.roblox.com/",
+            Users: "https://users.roblox.com/"
         }
     }
 ] as Endpoint[];
