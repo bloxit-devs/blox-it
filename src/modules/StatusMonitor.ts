@@ -59,7 +59,7 @@ const ApiEndpoints = [
 
 const EndpointHistory = {} as { [endpoint: string]: Status };
 
-const ResponseTimeThresholdMS = 1250;
+const ResponseTimeThresholdMS = 1000;
 
 /**
  * Helper method to assert if a set of promises is fulfilled
