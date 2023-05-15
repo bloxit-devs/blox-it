@@ -35,8 +35,11 @@ const ApiEndpoints = [
             "2FA API": "https://twostepverification.roblox.com/",
             "Account Settings": "https://accountsettings.roblox.com/",
             "Asset Delivery": "https://assetdelivery.roblox.com/",
+            "Auth API": "https://auth.roblox.com/",
             "Avatar API": "https://avatar.roblox.com/",
             "Badges API": "https://badges.roblox.com/",
+            "Billing API": "https://billing.roblox.com/",
+            "Chat API": "https://chat.roblox.com/",
             "Contacts API": "https://contacts.roblox.com/",
             "DataStore API": "https://gamepersistence.roblox.com/",
             "Develop API": "https://develop.roblox.com/",
@@ -46,6 +49,7 @@ const ApiEndpoints = [
             "Games API": "http://games.roblox.com/",
             "Groups API": "https://groups.roblox.com/",
             "Inventory API": "https://inventory.roblox.com/",
+            "Premium Features API": "https://premiumfeatures.roblox.com/",
             "Roblox Site": "https://www.roblox.com",
             "Thumbnails API": "https://thumbnails.roblox.com/",
             "Users API": "https://users.roblox.com/"
@@ -186,7 +190,10 @@ const getHandledResponse = (response: StatusResponse): HandledResponse => {
         Response: response
     };
 
-    if (response.Status === Status.Unknown) handledResponse.ShouldPost = false;
+    if (response.Status === Status.Unknown) {
+        console.log(`Unhandled response from ${response.Endpoint} : ${response.StatusCode}`);
+        handledResponse.ShouldPost = false;
+    }
 
     // Check response times
     if (response.Status === Status.Online) {
@@ -197,12 +204,12 @@ const getHandledResponse = (response: StatusResponse): HandledResponse => {
     // Checking past status
     const historyEntry = EndpointHistory[response.Endpoint];
     if (historyEntry === undefined && response.Status === Status.Online) {
-        EndpointHistory[response.Endpoint] = response.Status;
+        EndpointHistory[response.Endpoint] = handledResponse.Response.Status ?? response.Status;
         handledResponse.ShouldPost = false;
     }
 
     if (historyEntry === response.Status) handledResponse.ShouldPost = false;
-    EndpointHistory[response.Endpoint] = response.Status;
+    EndpointHistory[response.Endpoint] = handledResponse.Response.Status ?? response.Status;
     return handledResponse;
 };
 
