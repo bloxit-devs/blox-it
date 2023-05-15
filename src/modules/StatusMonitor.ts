@@ -40,7 +40,6 @@ const ApiEndpoints = [
             "Contacts API": "https://contacts.roblox.com/",
             "DataStore API": "https://gamepersistence.roblox.com/",
             "Develop API": "https://develop.roblox.com/",
-            Devforum: "https://devforum.roblox.com",
             "Economy API": "https://economy.roblox.com/",
             "Friends API": "https://friends.roblox.com/",
             "GameJoin API": "http://gamejoin.roblox.com/",
@@ -191,7 +190,8 @@ const getHandledResponse = (response: StatusResponse): HandledResponse => {
 
     // Check response times
     if (response.Status === Status.Online) {
-        response.Status = response.ResponseTime > ResponseTimeThresholdMS ? Status.Degraded : response.Status;
+        handledResponse.Response.Status =
+            response.ResponseTime > ResponseTimeThresholdMS ? Status.Degraded : response.Status;
     }
 
     // Checking past status
