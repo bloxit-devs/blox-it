@@ -32,18 +32,24 @@ const ApiEndpoints = [
     {
         system: "Roblox",
         apis: {
-            "2FA": "https://twostepverification.roblox.com/",
-            Avatar: "https://avatar.roblox.com/",
-            Badges: "https://badges.roblox.com/",
-            Contacts: "https://contacts.roblox.com/",
-            Develop: "https://develop.roblox.com/",
-            Economy: "https://economy.roblox.com/",
-            Friends: "https://friends.roblox.com/",
-            GameJoin: "http://gamejoin.roblox.com/",
-            Groups: "https://groups.roblox.com/",
-            Inventory: "https://inventory.roblox.com/",
-            Thumbnails: "https://thumbnails.roblox.com/",
-            Users: "https://users.roblox.com/"
+            "2FA API": "https://twostepverification.roblox.com/",
+            "Account Settings": "https://accountsettings.roblox.com/",
+            "Asset Delivery": "https://assetdelivery.roblox.com/",
+            "Avatar API": "https://avatar.roblox.com/",
+            "Badges API": "https://badges.roblox.com/",
+            "Contacts API": "https://contacts.roblox.com/",
+            "DataStore API": "https://gamepersistence.roblox.com/",
+            "Develop API": "https://develop.roblox.com/",
+            Devforum: "https://devforum.roblox.com",
+            "Economy API": "https://economy.roblox.com/",
+            "Friends API": "https://friends.roblox.com/",
+            "GameJoin API": "http://gamejoin.roblox.com/",
+            "Games API": "http://games.roblox.com/",
+            "Groups API": "https://groups.roblox.com/",
+            "Inventory API": "https://inventory.roblox.com/",
+            "Roblox Site": "https://www.roblox.com",
+            "Thumbnails API": "https://thumbnails.roblox.com/",
+            "Users API": "https://users.roblox.com/"
         }
     }
 ] as Endpoint[];
@@ -91,7 +97,7 @@ const createEmbed = (response: StatusResponse) => {
 
     return new EmbedBuilder()
         .setAuthor({ name: "Blox-it" })
-        .setTitle(`\`${response.Endpoint} API\` is ${Status[status]}.`)
+        .setTitle(`\`${response.Endpoint}\` is ${Status[status]}.`)
         .setDescription(`${response.Endpoint} API ${embedDescription}`)
         .setImage(`https://httpcats.com/${response.StatusCode}.jpg`)
         .setColor(embedColour)
