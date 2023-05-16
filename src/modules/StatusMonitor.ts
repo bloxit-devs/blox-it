@@ -77,10 +77,9 @@ const isFulfilled = <T>(item: PromiseSettledResult<T>): item is PromiseFulfilled
  * @returns The embedbuilder
  */
 const createEmbed = (response: StatusResponse) => {
-    const status = convertStatusCode(response.StatusCode);
     let embedDescription: string;
     let embedColour: HexColorString;
-    switch (status) {
+    switch (response.Status) {
         case Status.Online:
             embedDescription = "has improved performance.";
             embedColour = "#00FF00";
@@ -101,9 +100,9 @@ const createEmbed = (response: StatusResponse) => {
 
     return new EmbedBuilder()
         .setAuthor({ name: "Blox-it" })
-        .setTitle(`\`${response.Endpoint}\` is ${Status[status]}.`)
-        .setDescription(`${response.Endpoint} API ${embedDescription}`)
-        .setImage(`https://httpcats.com/${response.StatusCode}.jpg`)
+        .setTitle(`\`${response.Endpoint}\` is ${Status[response.Status ?? 3]}.`)
+        .setDescription(`${response.Endpoint} ${embedDescription}`)
+        .setThumbnail(`https://http.cat/${response.StatusCode}.jpg`)
         .setColor(embedColour)
         .addFields(
             { name: "Response Time", value: `\`\`\`${response.ResponseTime}ms\`\`\``, inline: true },
