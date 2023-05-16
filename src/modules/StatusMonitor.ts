@@ -51,6 +51,7 @@ const ApiEndpoints = [
             "Inventory API": "https://inventory.roblox.com/",
             "Premium Features API": "https://premiumfeatures.roblox.com/",
             "Roblox Site": "https://www.roblox.com",
+            "Text Filter API": "https://textfilter.roblox.com/",
             "Thumbnails API": "https://thumbnails.roblox.com/",
             "Users API": "https://users.roblox.com/"
         }
