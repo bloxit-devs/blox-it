@@ -94,7 +94,7 @@ const createEmbed = (response: StatusResponse) => {
             embedColour = "#FF0000";
             break;
         default:
-            embedDescription = "has unknown status.";
+            embedDescription = "has an unknown status.";
             embedColour = "#000000";
             break;
     }
@@ -113,6 +113,15 @@ const createEmbed = (response: StatusResponse) => {
         .setFooter({ text: "Posted by Blox-it" })
         .setTimestamp(new Date());
 };
+
+/**
+ * Partitions an array of StatusResponses into chunks of equal length
+ * @param responses the array to partition
+ * @param size the chunk size
+ * @returns the chunked array
+ */
+const partitionResponse = (responses: Array<StatusResponse>, size: number) =>
+    responses.map((e, i) => (i % size === 0 ? responses.slice(i, i + size) : null)).filter((e) => e);
 
 /**
  * Takes an array of endpoints and outputs them as one bulk message, should be used to group similar status messages
@@ -137,12 +146,16 @@ const announceApiStatus = (client: QClient, statusGroup: Status, responses: Arra
                 // Getting role pings
                 // TODO: Add role pings for Degraded, Down, Active states
 
-                // Posting message
-                const message = await channel.send({
-                    embeds: responses.map((response) => createEmbed(response))
-                    //allowedMentions: { roles: validatedRoles as string[] }
+                // Posting chunks of 10 (max embed limit)
+                console.log(responses);
+                partitionResponse(responses, 10).forEach(async (response) => {
+                    if (!response) return;
+                    const message = await channel.send({
+                        embeds: response.map((res) => createEmbed(res))
+                        //allowedMentions: { roles: validatedRoles as string[] }
+                    });
+                    if (message.crosspostable) message.crosspost();
                 });
-                if (message.crosspostable) message.crosspost();
             });
         })
         .catch(() => {
@@ -193,19 +206,18 @@ const getHandledResponse = (response: StatusResponse): HandledResponse => {
 
     if (response.Status === Status.Unknown) {
         console.log(`Unhandled response from ${response.Endpoint} : ${response.StatusCode}`);
-        handledResponse.ShouldPost = false;
+        //handledResponse.ShouldPost = false;
     }
 
     // Check response times
-    if (response.Status === Status.Online) {
+    if (handledResponse.Response.Status === Status.Online) {
         handledResponse.Response.Status =
             response.ResponseTime > ResponseTimeThresholdMS ? Status.Degraded : response.Status;
     }
 
     // Checking past status
     const historyEntry = EndpointHistory[response.Endpoint];
-    if (historyEntry === undefined && response.Status === Status.Online) {
-        EndpointHistory[response.Endpoint] = handledResponse.Response.Status ?? response.Status;
+    if (historyEntry === undefined && handledResponse.Response.Status === Status.Online) {
         handledResponse.ShouldPost = false;
     }
 
