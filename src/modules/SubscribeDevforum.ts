@@ -392,12 +392,17 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
  * uses the Next BuildID to get the site json for categories to determine
  * if a new release note is available on the 'current category' link
  */
-const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
+const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
     // Checking Client
     if (!CLIENT_ID) return;
+    const oldRelease = await getRecentRelease(CLIENT_ID);
+    const jsonDataUrl =
+        !oldRelease || (oldRelease && oldRelease >= 9999)
+            ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
+            : `https://create.roblox.com/docs/_next/data/${module.build_id}/resources/release-note/Release-Note-for-${oldRelease}.json`;
 
     axios
-        .get(`https://create.roblox.com/docs/_next/data/${module.build_id}/getting-started.json`)
+        .get(jsonDataUrl)
         .then(async (result) => {
             // Handling invalid result
             if (!result.data) return;
@@ -405,18 +410,16 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             throttleReleases = false;
 
             // Getting release paths
-            const navigation: NavElement[] = result.data.pageProps.data.navigation;
-            const resources: DocElement[] = navigation.find((element) => element.heading === "Resources")
+            const navigation: NavElement[] = result.data.pageProps.navigation;
+            const releaseNotes: DocElement[] = navigation.find((element) => element.heading === "Release Notes")
                 ?.navigation as DocElement[];
 
             // Getting relese note
-            const releaseNotes: DocElement | undefined = resources.find((element) => element.title === "Release Notes");
-            const currentRelease = releaseNotes?.section.find((element) => element.title === "Current Release");
+            const currentRelease = releaseNotes?.find((element) => element.title === "Current Release");
             const releaseNumber = currentRelease?.path?.split("-").pop();
             if (releaseNumber === undefined) return;
 
             // Checking release number
-            const oldRelease = await getRecentRelease(CLIENT_ID);
             const parsedReleaseNum = parseInt(releaseNumber);
             if (!oldRelease || (oldRelease && oldRelease >= 9999)) {
                 setRecentRelease(CLIENT_ID, parsedReleaseNum - 1);
@@ -442,13 +445,15 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
             setRecentRelease(CLIENT_ID, parsedReleaseNum);
 
             // Posting release
-            createPost(client, {
-                id: parsedReleaseNum,
-                fancy_title: `Release Notes for ${releaseNumber}`,
-                image_url: DEFAULT_IMAGE,
-                created_at: new Date().toISOString(),
-                category_id: Category.release_notes
-            });
+            for (let release = oldRelease ? oldRelease + 1 : parsedReleaseNum; release <= parsedReleaseNum; release++) {
+                createPost(client, {
+                    id: release,
+                    fancy_title: `Release Notes for ${release}`,
+                    image_url: DEFAULT_IMAGE,
+                    created_at: new Date().toISOString(),
+                    category_id: Category.release_notes
+                });
+            }
         })
         .catch((err: AxiosError) => {
             if (throttleReleases) {
