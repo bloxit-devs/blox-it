@@ -26,34 +26,82 @@ interface HandledResponse {
 
 type GroupedResponses = Array<Array<StatusResponse>>;
 
-type Endpoint = { system: string; apis: { [name: string]: string } };
+type EndpointData = { base: string };
+type Endpoint = { system: string; apis: { [name: string]: EndpointData } };
 
 const ApiEndpoints = [
     {
         system: "Roblox",
         apis: {
-            "2FA API": "https://twostepverification.roblox.com/",
-            "Account Settings": "https://accountsettings.roblox.com/",
-            "Asset Delivery": "https://assetdelivery.roblox.com/",
-            "Auth API": "https://auth.roblox.com/",
-            "Avatar API": "https://avatar.roblox.com/",
-            "Badges API": "https://badges.roblox.com/",
-            "Billing API": "https://billing.roblox.com/",
-            "Chat API": "https://chat.roblox.com/",
-            "Contacts API": "https://contacts.roblox.com/",
-            "DataStore API": "https://gamepersistence.roblox.com/",
-            "Develop API": "https://develop.roblox.com/",
-            "Economy API": "https://economy.roblox.com/",
-            "Friends API": "https://friends.roblox.com/",
-            "GameJoin API": "http://gamejoin.roblox.com/",
-            "Games API": "http://games.roblox.com/",
-            "Groups API": "https://groups.roblox.com/",
-            "Inventory API": "https://inventory.roblox.com/",
-            "Premium Features API": "https://premiumfeatures.roblox.com/",
-            "Roblox Site": "https://www.roblox.com",
-            "Text Filter API": "https://textfilter.roblox.com/",
-            "Thumbnails API": "https://thumbnails.roblox.com/",
-            "Users API": "https://users.roblox.com/"
+            "2FA API": {
+                base: "https://twostepverification.roblox.com/"
+            },
+            "Account Settings": {
+                base: "https://accountsettings.roblox.com/"
+            },
+            "Asset Delivery": {
+                base: "https://assetdelivery.roblox.com/"
+            },
+            "Auth API": {
+                base: "https://auth.roblox.com/"
+            },
+            "Avatar API": {
+                base: "https://avatar.roblox.com/"
+            },
+            "Badges API": {
+                base: "https://badges.roblox.com/"
+            },
+            "Billing API": {
+                base: "https://billing.roblox.com/"
+            },
+            "Chat API": {
+                base: "https://chat.roblox.com/"
+            },
+            "Contacts API": {
+                base: "https://contacts.roblox.com/"
+            },
+            "DataStore API": {
+                base: "https://gamepersistence.roblox.com/"
+            },
+            "Develop API": {
+                base: "https://develop.roblox.com/"
+            },
+            "Economy API": {
+                base: "https://economy.roblox.com/"
+            },
+            "Friends API": {
+                base: "https://friends.roblox.com/"
+            },
+            "GameJoin API": {
+                base: "http://gamejoin.roblox.com/"
+            },
+            "Games API": {
+                base: "http://games.roblox.com/"
+            },
+            "Groups API": {
+                base: "https://groups.roblox.com/"
+            },
+            "Inventory API": {
+                base: "https://inventory.roblox.com/"
+            },
+            "Premium Features API": {
+                base: "https://premiumfeatures.roblox.com/"
+            },
+            "Roblox Site": {
+                base: "https://www.roblox.com"
+            },
+            "Text Filter API": {
+                base: "https://textfilter.roblox.com/"
+            },
+            "Thumbnails API": {
+                base: "https://thumbnails.roblox.com/"
+            },
+            "Users API": {
+                base: "https://users.roblox.com/"
+            },
+            "Homepage API": {
+                base: "https://apis.roblox.com/product-experimentation-platform/v1/projects/1/layers/PlayerApp.HomePage.UX/values"
+            }
         }
     }
 ] as Endpoint[];
@@ -230,10 +278,10 @@ const getHandledResponse = (response: StatusResponse): HandledResponse => {
  * @param endpointSet The service and its endpoint grouping
  */
 const checkEndpoints = async (client: QClient, endpointSet: Endpoint) => {
-    const results = Object.entries(endpointSet.apis).map(([name, uri]) => {
+    const results = Object.entries(endpointSet.apis).map(([name, endpointData]) => {
         return new Promise<StatusResponse>((resolve, reject) => {
             axios
-                .get(uri)
+                .get(endpointData.base)
                 .then((res) => {
                     resolve({
                         StatusCode: res.status,
