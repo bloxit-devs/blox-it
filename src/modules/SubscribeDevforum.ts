@@ -9,7 +9,7 @@ import { parseDocument, DomUtils } from "htmlparser2";
 
 /* Announcements, News/Alerts, Release Notes */
 const CATEGORIES_WATCHING = [36, 193];
-const RELEASE_NOTES = "https://create.roblox.com/docs/resources/release-note/Release-Note-for-";
+const RELEASE_NOTES = "https://create.roblox.com/docs/release-notes/release-notes-";
 const FORUM_LINK = "https://devforum.roblox.com/c/updates/45.json";
 const DEFAULT_IMAGE =
     "https://devforum-uploads.s3.dualstack.us-east-2.amazonaws.com/uploads/original/4X/c/e/2/ce2bb810f2a76b08be421b703f7f0e20750a6004.png";
@@ -164,7 +164,7 @@ const getNextBuildID = async (module: SubscribeDevforum) => {
     if (!CLIENT_ID) return;
     const previousRelease = await getRecentRelease(CLIENT_ID);
     const buildIdLink = previousRelease
-        ? `https://create.roblox.com/docs/release-notes/release-notes-${previousRelease}`
+        ? `${RELEASE_NOTES}${previousRelease}`
         : `https://create.roblox.com/docs/reference/engine`;
 
     return axios.get(buildIdLink, { responseType: "document", transformResponse: [(v) => v] }).then((res) => {
@@ -178,7 +178,6 @@ const getNextBuildID = async (module: SubscribeDevforum) => {
         }, document.childNodes);
         const element: any = elements?.children[0];
         const elementData = JSON.parse(element.data);
-        console.info("found buildid: ", elementData.buildId);
 
         module.build_id = elementData.buildId;
         return elementData.buildId;
@@ -436,9 +435,7 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
             let data;
             try {
                 // eslint-disable-next-line prefer-const
-                data = await axios.get(
-                    `https://create.roblox.com/docs/resources/release-note/Release-Note-for-${releaseNumber}`
-                );
+                data = await axios.get(`${RELEASE_NOTES}${releaseNumber}`);
             } catch (e) {
                 return;
             }
