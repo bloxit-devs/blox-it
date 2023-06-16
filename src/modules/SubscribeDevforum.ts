@@ -160,24 +160,29 @@ const decodeHTML = (encodedString: string): string => {
 /**
  * Gets the Build ID for the documentation
  */
-const getNextBuildID = (module: SubscribeDevforum) => {
-    return axios
-        .get("https://create.roblox.com/docs", { responseType: "document", transformResponse: [(v) => v] })
-        .then((res) => {
-            // Handling invalid result
-            if (!res.data) return;
-            if (res.status !== 200) return;
+const getNextBuildID = async (module: SubscribeDevforum) => {
+    if (!CLIENT_ID) return;
+    const previousRelease = await getRecentRelease(CLIENT_ID);
+    const buildIdLink = previousRelease
+        ? `https://create.roblox.com/docs/release-notes/release-notes-${previousRelease}`
+        : `https://create.roblox.com/docs/reference/engine`;
 
-            const document = parseDocument(res.data);
-            const elements = DomUtils.findOne((element) => {
-                return element.attribs.id === "__NEXT_DATA__";
-            }, document.childNodes);
-            const element: any = elements?.children[0];
-            const elementData = JSON.parse(element.data);
+    return axios.get(buildIdLink, { responseType: "document", transformResponse: [(v) => v] }).then((res) => {
+        // Handling invalid result
+        if (!res.data) return;
+        if (res.status !== 200) return;
 
-            module.build_id = elementData.buildId;
-            return elementData.buildId;
-        });
+        const document = parseDocument(res.data);
+        const elements = DomUtils.findOne((element) => {
+            return element.attribs.id === "__NEXT_DATA__";
+        }, document.childNodes);
+        const element: any = elements?.children[0];
+        const elementData = JSON.parse(element.data);
+        console.info("found buildid: ", elementData.buildId);
+
+        module.build_id = elementData.buildId;
+        return elementData.buildId;
+    });
 };
 
 /**
@@ -399,7 +404,7 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
     const jsonDataUrl =
         !oldRelease || (oldRelease && oldRelease >= 9999)
             ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
-            : `https://create.roblox.com/docs/_next/data/${module.build_id}/resources/release-note/Release-Note-for-${oldRelease}.json`;
+            : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease}.json`;
 
     axios
         .get(jsonDataUrl)
@@ -456,9 +461,8 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
             }
         })
         .catch((err: AxiosError) => {
-            if (throttleReleases) {
+            if (throttleReleases || err.response?.status === 404) {
                 getNextBuildID(module);
-                return;
             }
             throttleReleases = true;
 
