@@ -52,6 +52,7 @@ type PostData = {
     image_url: string;
     created_at: string;
     category_id: Category;
+    ping_roles?: boolean;
 };
 
 /**
@@ -319,7 +320,7 @@ const createPost = async (client: QClient, postData: PostData) => {
 
                 // Posting message
                 const message = await channel.send({
-                    content: printRoles,
+                    content: postData.ping_roles ? printRoles : "",
                     embeds: [embed],
                     components: [row],
                     allowedMentions: { roles: validatedRoles as string[] }
@@ -351,10 +352,10 @@ const handlePosts = async (client: QClient, posts: PostData[]) => {
 
     // Posting all valid topics
     if (!topics || topics.length <= 0) return;
-    topics.reverse().forEach((post) => {
+    topics.reverse().forEach((post, index) => {
         cachedPosts.push(post.id);
         if (cachedPosts.length > 10) cachedPosts.shift();
-        createPost(client, post);
+        createPost(client, { ...post, ping_roles: index <= 0 });
     });
 };
 
@@ -453,7 +454,8 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
                     fancy_title: `Release Notes for ${release}`,
                     image_url: DEFAULT_IMAGE,
                     created_at: new Date().toISOString(),
-                    category_id: Category.release_notes
+                    category_id: Category.release_notes,
+                    ping_roles: false
                 });
             }
         })
