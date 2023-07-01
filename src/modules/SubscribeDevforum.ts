@@ -415,7 +415,7 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
             throttleReleases = false;
 
             // Getting release paths
-            const navigation: NavElement[] = result.data.pageProps.navigation;
+            const navigation: NavElement[] = result.data.pageProps.navigation.navigationContent;
             const releaseNotes: DocElement[] = navigation.find((element) => element.heading === "Release Notes")
                 ?.navigation as DocElement[];
 
