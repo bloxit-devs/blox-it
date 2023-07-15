@@ -136,7 +136,9 @@ const decodeHTML = (encodedString: string): string => {
         gt: ">",
         amp: "&",
         quot: '"',
-        apos: "'"
+        apos: "'",
+        ldquo: "“",
+        rdquo: "”"
     };
     const translateTags = {
         strong: "**",
