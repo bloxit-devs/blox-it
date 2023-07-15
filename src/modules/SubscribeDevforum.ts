@@ -19,7 +19,9 @@ config();
 const IS_DEVELOPMENT = process.env.NODE_ENV === "development" || process.env.TS_NODE_DEV;
 const CLIENT_ID = IS_DEVELOPMENT ? process.env.DEV_CLIENT_ID : process.env.CLIENT_ID;
 
-const cachedPosts: number[] = [];
+const SCHEDULED_CHECKS: Record<number, number> = [];
+const CACHED_POSTS: Array<number> = [];
+
 let throttleForum = false;
 let throttleReleases = false;
 
@@ -291,7 +293,7 @@ const createPost = async (client: QClient, postData: PostData) => {
         .then((guilds) => {
             guilds.forEach(async (guildInfo) => {
                 // Adding post to cache
-                if (!cachedPosts.includes(postData.id)) cachedPosts.push(postData.id);
+                if (!CACHED_POSTS.includes(postData.id)) CACHED_POSTS.push(postData.id);
 
                 // Getting guilds to post in
                 const guild = await client.guilds.fetch(guildInfo.guildID);
@@ -343,7 +345,7 @@ const handlePosts = async (client: QClient, posts: PostData[]) => {
     const topics: PostData[] = posts.filter((post: PostData) => {
         if (!CATEGORIES_WATCHING.includes(post.category_id)) return false;
 
-        if (cachedPosts.includes(post.id)) return false;
+        if (CACHED_POSTS.includes(post.id)) return false;
 
         if ((Date.now() - new Date(post.created_at).getTime()) / MS_TO_MIN > 15) return false;
 
@@ -353,8 +355,8 @@ const handlePosts = async (client: QClient, posts: PostData[]) => {
     // Posting all valid topics
     if (!topics || topics.length <= 0) return;
     topics.reverse().forEach((post, index) => {
-        cachedPosts.push(post.id);
-        if (cachedPosts.length > 10) cachedPosts.shift();
+        CACHED_POSTS.push(post.id);
+        if (CACHED_POSTS.length > 10) CACHED_POSTS.shift();
         createPost(client, { ...post, ping_roles: index <= 0 });
     });
 };
@@ -373,7 +375,7 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
             throttleForum = false;
 
             // Remove oldest post from cache if reached max
-            if (cachedPosts.length > 10) cachedPosts.shift();
+            if (CACHED_POSTS.length > 10) CACHED_POSTS.shift();
             handlePosts(client, result.data.topic_list.topics);
         })
         .catch((err) => {
@@ -438,7 +440,9 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
                 // eslint-disable-next-line prefer-const
                 data = await axios.get(`${RELEASE_NOTES}${releaseNumber}`);
             } catch (e) {
-                return;
+                return console.info(
+                    `[ForumNotifier] Failed to access release notes (${RELEASE_NOTES}${releaseNumber}) Exception: ${e}`
+                );
             }
 
             // Return if we couldn't find the release note
@@ -455,7 +459,7 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
                     image_url: DEFAULT_IMAGE,
                     created_at: new Date().toISOString(),
                     category_id: Category.release_notes,
-                    ping_roles: false
+                    ping_roles: !oldRelease || release === oldRelease + 1
                 });
             }
         })
@@ -482,8 +486,16 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
  * @param getTime method called to get the timeout
  */
 const runScheduledCheck = (callback: () => number) => {
-    const timeout = callback();
-    setTimeout(runScheduledCheck, timeout, callback);
+    let timeoutId: number | undefined;
+    const run = () => {
+        const timeout = callback();
+        if (!timeoutId || SCHEDULED_CHECKS[timeoutId] !== timeout) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(run, timeout)[Symbol.toPrimitive]();
+            SCHEDULED_CHECKS[timeoutId] = timeout;
+        }
+    };
+    run();
 };
 
 /**
