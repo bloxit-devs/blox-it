@@ -373,7 +373,7 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
         .then((result) => {
             // Handling invalid result
             if (!result.data) return;
-            if (result.status !== 200) return;
+            if (result.status < 200 || result.status > 200) return;
             throttleForum = false;
 
             // Remove oldest post from cache if reached max
@@ -415,7 +415,7 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
         .then(async (result) => {
             // Handling invalid result
             if (!result.data) return;
-            if (result.status !== 200) return;
+            if (result.status < 200 || result.status > 200) return;
             throttleReleases = false;
 
             // Getting release paths
