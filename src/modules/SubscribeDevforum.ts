@@ -313,7 +313,7 @@ const createPost = async (client: QClient, postData: PostData) => {
             // Getting role pings
             const roleType = postData.category_id === Category.release_notes ? "releaseRole" : "updateRole";
             const roles = [guildInfo.allRole, guildInfo[roleType]] as (string | undefined)[];
-            const validatedRoles = roles.filter((role) => role !== undefined && role !== null);
+            const validatedRoles = roles.filter((role) => role);
             const printRoles = validatedRoles.map((role) => `<@&${role}>`).join(" ");
 
             // Setting image
@@ -329,7 +329,7 @@ const createPost = async (client: QClient, postData: PostData) => {
                 components: [row],
                 allowedMentions: { roles: validatedRoles as string[] }
             });
-            if (message.crosspostable) message.crosspost();
+            if (message.crosspostable) await message.crosspost();
         })
     );
 };
@@ -423,7 +423,6 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
         !oldRelease || (oldRelease && oldRelease >= 9999)
             ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
             : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease}.json`;
-    console.info("data url picked: ", jsonDataUrl);
 
     axios
         .get(jsonDataUrl)
@@ -495,16 +494,16 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
 
 /**
  * @param callback method called on the schedule
- * @param getTime method called to get the timeout
+ * @param getTime method called to get the interval
  */
 const runScheduledCheck = (callback: () => number) => {
-    let timeoutId: number | undefined;
+    let intervalId: number | undefined;
     const run = () => {
-        const timeout = callback();
-        if (!timeoutId || SCHEDULED_CHECKS[timeoutId] !== timeout) {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(run, timeout)[Symbol.toPrimitive]();
-            SCHEDULED_CHECKS[timeoutId] = timeout;
+        const interval = callback();
+        if (!intervalId || SCHEDULED_CHECKS[intervalId] !== interval) {
+            clearInterval(intervalId);
+            intervalId = setInterval(run, interval)[Symbol.toPrimitive]();
+            SCHEDULED_CHECKS[intervalId] = interval;
         }
     };
     run();
@@ -534,12 +533,10 @@ export class SubscribeDevforum extends Module {
             pollDevforum(this, client);
             return throttleForum ? 5 * 1000 * 60 : 1 * 1000 * 60;
         });
-        console.log("[ForumNotifier] Setup Forum Timer");
 
         runScheduledCheck(() => {
             pollReleaseNotes(this, client);
             return throttleReleases ? 5 * 1000 * 60 : 1 * 1000 * 60;
         });
-        console.log("[ForumNotifier] Setup Release Timer");
     }
 }
