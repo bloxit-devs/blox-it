@@ -291,50 +291,47 @@ const createEmbed = async (postData: PostData) => {
  * @returns
  */
 const createPost = async (client: QClient, postData: PostData) => {
-    getGuildChannels()
-        .then((guilds) => {
-            guilds.forEach(async (guildInfo) => {
-                // Adding post to cache
-                if (!CACHED_POSTS.includes(postData.id)) CACHED_POSTS.push(postData.id);
+    const guilds = await getGuildChannels();
+    return Promise.all(
+        guilds.map(async (guildInfo) => {
+            // Adding post to cache
+            if (!CACHED_POSTS.includes(postData.id)) CACHED_POSTS.push(postData.id);
 
-                // Getting guilds to post in
-                const guild = await client.guilds.fetch(guildInfo.guildID);
-                if (!guild) return false;
+            // Getting guilds to post in
+            const guild = await client.guilds.fetch(guildInfo.guildID);
+            if (!guild) return false;
 
-                // Getting channel id to post to
-                const chosenChannelID =
-                    postData.category_id === Category.release_notes ? guildInfo.rbxReleases : guildInfo.rbxUpdates;
-                if (!chosenChannelID) return false;
+            // Getting channel id to post to
+            const chosenChannelID =
+                postData.category_id === Category.release_notes ? guildInfo.rbxReleases : guildInfo.rbxUpdates;
+            if (!chosenChannelID) return false;
 
-                // Finding actual channel
-                const channel = (await guild.channels.fetch(chosenChannelID)) as TextChannel;
-                if (!channel) return false;
+            // Finding actual channel
+            const channel = (await guild.channels.fetch(chosenChannelID)) as TextChannel;
+            if (!channel) return false;
 
-                // Getting role pings
-                const roleType = postData.category_id === Category.release_notes ? "releaseRole" : "updateRole";
-                const roles = [guildInfo.allRole, guildInfo[roleType]] as (string | undefined)[];
-                const validatedRoles = roles.filter((role) => role !== undefined && role !== null);
-                const printRoles = validatedRoles.map((role) => `<@&${role}>`).join(" ");
+            // Getting role pings
+            const roleType = postData.category_id === Category.release_notes ? "releaseRole" : "updateRole";
+            const roles = [guildInfo.allRole, guildInfo[roleType]] as (string | undefined)[];
+            const validatedRoles = roles.filter((role) => role !== undefined && role !== null);
+            const printRoles = validatedRoles.map((role) => `<@&${role}>`).join(" ");
 
-                // Setting image
-                postData.image_url = (postData.image_url?.startsWith("//") ? "https:" : "") + postData.image_url;
+            // Setting image
+            postData.image_url = (postData.image_url?.startsWith("//") ? "https:" : "") + postData.image_url;
 
-                // Creating embed
-                const { embed, row } = await createEmbed(postData);
+            // Creating embed
+            const { embed, row } = await createEmbed(postData);
 
-                // Posting message
-                const message = await channel.send({
-                    content: postData.ping_roles ? printRoles : "",
-                    embeds: [embed],
-                    components: [row],
-                    allowedMentions: { roles: validatedRoles as string[] }
-                });
-                if (message.crosspostable) message.crosspost();
+            // Posting message
+            const message = await channel.send({
+                content: postData.ping_roles ? printRoles : "",
+                embeds: [embed],
+                components: [row],
+                allowedMentions: { roles: validatedRoles as string[] }
             });
+            if (message.crosspostable) message.crosspost();
         })
-        .catch(() => {
-            console.log("[ForumNotifier] Failed to getGuildChannels()");
-        });
+    );
 };
 
 /**
@@ -397,6 +394,23 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
 };
 
 /**
+ * Checks if a release note is valid and can be accessed.
+ * @param releaseNumber
+ * @returns
+ */
+const checkReleaseNoteValid = async (releaseNumber: string): Promise<boolean> => {
+    try {
+        const data = await axios.get(`${RELEASE_NOTES}${releaseNumber}`);
+
+        // Return if if the release note is valid
+        return data && data.status === 200;
+    } catch (e) {
+        console.info(`[ForumNotifier] Failed to access release notes (${RELEASE_NOTES}${releaseNumber}) Exception: ${e}`);
+        return false;
+    }
+};
+
+/**
  * Performs a get request on the create site for release notes,
  * uses the Next BuildID to get the site json for categories to determine
  * if a new release note is available on the 'current category' link
@@ -409,6 +423,7 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
         !oldRelease || (oldRelease && oldRelease >= 9999)
             ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
             : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease}.json`;
+    console.info("data url picked: ", jsonDataUrl);
 
     axios
         .get(jsonDataUrl)
@@ -436,33 +451,28 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
                 return;
             }
 
-            // Attempt to check if next release is available
-            let data;
-            try {
-                // eslint-disable-next-line prefer-const
-                data = await axios.get(`${RELEASE_NOTES}${releaseNumber}`);
-            } catch (e) {
-                return console.info(
-                    `[ForumNotifier] Failed to access release notes (${RELEASE_NOTES}${releaseNumber}) Exception: ${e}`
-                );
-            }
-
-            // Return if we couldn't find the release note
-            if (!data || data.status !== 200) return;
+            // Ensuring release note is valid
+            if (!checkReleaseNoteValid(releaseNumber)) return;
 
             // Setting database
             setRecentRelease(CLIENT_ID, parsedReleaseNum);
 
             // Posting release
+            let shouldPing = true;
             for (let release = oldRelease ? oldRelease + 1 : parsedReleaseNum; release <= parsedReleaseNum; release++) {
-                createPost(client, {
+                // Check if post is valid
+                if (!checkReleaseNoteValid(release.toString())) continue;
+
+                // Make post
+                await createPost(client, {
                     id: release,
                     fancy_title: `Release Notes for ${release}`,
                     image_url: DEFAULT_IMAGE,
                     created_at: new Date().toISOString(),
                     category_id: Category.release_notes,
-                    ping_roles: !oldRelease || release === oldRelease + 1
+                    ping_roles: shouldPing
                 });
+                shouldPing = false;
             }
         })
         .catch((err: AxiosError) => {
