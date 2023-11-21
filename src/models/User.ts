@@ -6,16 +6,16 @@ import { Table, Column, Model, Unique, AllowNull, DataType, Default } from "sequ
 export class User extends Model {
     @Unique
     @Column(DataType.STRING)
-    discordID!: string;
+    declare discordID: string;
 
     @Unique
     @AllowNull
     @Column(DataType.INTEGER)
-    robloxID?: number;
+    declare robloxID?: number;
 
     @Default(false)
     @Column(DataType.BOOLEAN)
-    banned?: boolean;
+    declare banned?: boolean;
 }
 
 export function checkBanned(rbxID: number): boolean {

@@ -11,20 +11,20 @@ function randomInt(min: number, max: number): number {
 export class Code extends Model {
     @Unique
     @Column(DataType.INTEGER)
-    robloxID!: number;
+    declare robloxID: number;
 
     @Unique
     @AllowNull
     @Column(DataType.INTEGER)
-    code?: number;
+    declare code?: number;
 
     @Unique
     @AllowNull
     @Column(DataType.STRING)
-    phrase?: string;
+    declare phrase?: string;
 
     @Column(DataType.DATE)
-    expiry!: Date;
+    declare expiry: Date;
 }
 
 export async function getCode(rbxID: number): Promise<number | null> {

@@ -1,12 +1,15 @@
 {
     "name": "blox-it",
     "main": "src/bot.ts",
+    "engines": {
+        "node": ">=16.0.0 <19.0.0"
+    },
     "scripts": {
-        "start": "yarn node --optimize_for_size --gc_interval=100 --max_old_space_size=920 dist/bot.js",
-        "deploy": "yarn node dist/deploy.js",
-        "build": "yarn swc ./src -d dist --delete-dir-on-start",
-        "dev": "cross-env-shell NODE_ENV=development \"yarn build && yarn deploy && yarn start\"",
-        "type-check": "yarn tsc",
+        "start": "node --optimize_for_size --gc_interval=100 --max_old_space_size=920 dist/bot.js",
+        "deploy": "node dist/deploy.js",
+        "build": "swc ./src -d dist --delete-dir-on-start",
+        "dev": "cross-env-shell NODE_ENV=development \"pnpm build && pnpm run deploy && pnpm start\"",
+        "type-check": "tsc",
         "lint": "eslint \"src/**/*.ts\"",
         "prettier": "prettier --write \"src/**/*.ts\""
     },
@@ -53,5 +56,9 @@
         "ts-node": "^10.9.1",
         "ts-node-dev": "^2.0.0",
         "typescript": "^4.7.4"
+    },
+    "volta": {
+        "node": "18.18.2",
+        "pnpm": "8.10.5"
     }
 }

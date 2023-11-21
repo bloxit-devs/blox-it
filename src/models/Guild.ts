@@ -26,54 +26,54 @@ export class Guild extends Model {
     @Unique
     @PrimaryKey
     @Column(DataType.STRING)
-    guildID!: string;
+    declare guildID: string;
 
     /* Devforum Notifier */
     @AllowNull
     @Column(DataType.STRING)
-    rbxUpdates?: string | null;
+    declare rbxUpdates?: string | null;
 
     @AllowNull
     @Column(DataType.STRING)
-    rbxReleases?: string | null;
+    declare rbxReleases?: string | null;
 
     /* Reaction Roles */
     @AllowNull
     @Column(DataType.STRING)
-    allRole?: string | null;
+    declare allRole?: string | null;
 
     @AllowNull
     @Column(DataType.STRING)
-    updateRole?: string | null;
+    declare updateRole?: string | null;
 
     @AllowNull
     @Column(DataType.STRING)
-    releaseRole?: string | null;
+    declare releaseRole?: string | null;
 
     /* Verification System */
     @Default(false)
     @Column(DataType.BOOLEAN)
-    verifyEnabled?: boolean;
+    declare verifyEnabled?: boolean;
 
     @AllowNull
     @Column(DataType.STRING)
-    verifyEmbedID?: string | null;
+    declare verifyEmbedID?: string | null;
 
     @AllowNull
     @Column(DataType.STRING)
-    verifiedRole?: string | null;
+    declare verifiedRole?: string | null;
 
     @AllowNull
     @Column(DataType.STRING)
-    devMemberRole?: string | null;
+    declare devMemberRole?: string | null;
 
     @AllowNull
     @Column(DataType.STRING)
-    devRegularRole?: string | null;
+    declare devRegularRole?: string | null;
 
     @AllowNull
     @Column(DataType.STRING)
-    rbxStaffRole?: string | null;
+    declare rbxStaffRole?: string | null;
 }
 
 export async function getGuild(guildID: string | number): Promise<Guild | null> {
