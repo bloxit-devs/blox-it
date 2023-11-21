@@ -16,7 +16,7 @@ Ensure you have python3 installed and visual studio build tools for node-gyp to 
 3. Once you are happy run `yarn build` to build the typescript to js files and then `yarn start (I recommend using pm2 for this)
 
 ## Features
-- [x] Expandable Events Frameworok
+- [x] Expandable Events Framework
 - [x] Exapandable Interaction Framework
 - [x] Roblox Verification
 - [x] Devforum Updates Notifier

@@ -9,7 +9,7 @@ import { parseDocument, DomUtils } from "htmlparser2";
 
 /* Announcements, News/Alerts, Release Notes */
 const CATEGORIES_WATCHING = [36, 193];
-const RELEASE_NOTES = "https://create.roblox.com/docs/resources/release-note/Release-Note-for-";
+const RELEASE_NOTES = "https://create.roblox.com/docs/release-notes/release-notes-";
 const FORUM_LINK = "https://devforum.roblox.com/c/updates/45.json";
 const DEFAULT_IMAGE =
     "https://devforum-uploads.s3.dualstack.us-east-2.amazonaws.com/uploads/original/4X/c/e/2/ce2bb810f2a76b08be421b703f7f0e20750a6004.png";
@@ -19,7 +19,9 @@ config();
 const IS_DEVELOPMENT = process.env.NODE_ENV === "development" || process.env.TS_NODE_DEV;
 const CLIENT_ID = IS_DEVELOPMENT ? process.env.DEV_CLIENT_ID : process.env.CLIENT_ID;
 
-const cachedPosts: number[] = [];
+const SCHEDULED_CHECKS: Record<number, number> = [];
+const CACHED_POSTS: Array<number> = [];
+
 let throttleForum = false;
 let throttleReleases = false;
 
@@ -52,6 +54,7 @@ type PostData = {
     image_url: string;
     created_at: string;
     category_id: Category;
+    ping_roles?: boolean;
 };
 
 /**
@@ -133,7 +136,9 @@ const decodeHTML = (encodedString: string): string => {
         gt: ">",
         amp: "&",
         quot: '"',
-        apos: "'"
+        apos: "'",
+        ldquo: "“",
+        rdquo: "”"
     };
     const translateTags = {
         strong: "**",
@@ -160,24 +165,28 @@ const decodeHTML = (encodedString: string): string => {
 /**
  * Gets the Build ID for the documentation
  */
-const getNextBuildID = (module: SubscribeDevforum) => {
-    return axios
-        .get("https://create.roblox.com/docs", { responseType: "document", transformResponse: [(v) => v] })
-        .then((res) => {
-            // Handling invalid result
-            if (!res.data) return;
-            if (res.status !== 200) return;
+const getNextBuildID = async (module: SubscribeDevforum) => {
+    if (!CLIENT_ID) return;
+    const previousRelease = await getRecentRelease(CLIENT_ID);
+    const buildIdLink = previousRelease
+        ? `${RELEASE_NOTES}${previousRelease >= 9999 ? 550 : previousRelease}`
+        : `https://create.roblox.com/docs/reference/engine`;
 
-            const document = parseDocument(res.data);
-            const elements = DomUtils.findOne((element) => {
-                return element.attribs.id === "__NEXT_DATA__";
-            }, document.childNodes);
-            const element: any = elements?.children[0];
-            const elementData = JSON.parse(element.data);
+    return axios.get(buildIdLink, { responseType: "document", transformResponse: [(v) => v] }).then((res) => {
+        // Handling invalid result
+        if (!res.data) return;
+        if (res.status !== 200) return;
 
-            module.build_id = elementData.buildId;
-            return elementData.buildId;
-        });
+        const document = parseDocument(res.data);
+        const elements = DomUtils.findOne((element) => {
+            return element.attribs.id === "__NEXT_DATA__";
+        }, document.childNodes);
+        const element: any = elements?.children[0];
+        const elementData = JSON.parse(element.data);
+
+        module.build_id = elementData.buildId;
+        return elementData.buildId;
+    });
 };
 
 /**
@@ -282,50 +291,47 @@ const createEmbed = async (postData: PostData) => {
  * @returns
  */
 const createPost = async (client: QClient, postData: PostData) => {
-    getGuildChannels()
-        .then((guilds) => {
-            guilds.forEach(async (guildInfo) => {
-                // Adding post to cache
-                if (!cachedPosts.includes(postData.id)) cachedPosts.push(postData.id);
+    const guilds = await getGuildChannels();
+    return Promise.all(
+        guilds.map(async (guildInfo) => {
+            // Adding post to cache
+            if (!CACHED_POSTS.includes(postData.id)) CACHED_POSTS.push(postData.id);
 
-                // Getting guilds to post in
-                const guild = await client.guilds.fetch(guildInfo.guildID);
-                if (!guild) return false;
+            // Getting guilds to post in
+            const guild = await client.guilds.fetch(guildInfo.guildID);
+            if (!guild) return false;
 
-                // Getting channel id to post to
-                const chosenChannelID =
-                    postData.category_id === Category.release_notes ? guildInfo.rbxReleases : guildInfo.rbxUpdates;
-                if (!chosenChannelID) return false;
+            // Getting channel id to post to
+            const chosenChannelID =
+                postData.category_id === Category.release_notes ? guildInfo.rbxReleases : guildInfo.rbxUpdates;
+            if (!chosenChannelID) return false;
 
-                // Finding actual channel
-                const channel = (await guild.channels.fetch(chosenChannelID)) as TextChannel;
-                if (!channel) return false;
+            // Finding actual channel
+            const channel = (await guild.channels.fetch(chosenChannelID)) as TextChannel;
+            if (!channel) return false;
 
-                // Getting role pings
-                const roleType = postData.category_id === Category.release_notes ? "releaseRole" : "updateRole";
-                const roles = [guildInfo.allRole, guildInfo[roleType]] as (string | undefined)[];
-                const validatedRoles = roles.filter((role) => role !== undefined && role !== null);
-                const printRoles = validatedRoles.map((role) => `<@&${role}>`).join(" ");
+            // Getting role pings
+            const roleType = postData.category_id === Category.release_notes ? "releaseRole" : "updateRole";
+            const roles = [guildInfo.allRole, guildInfo[roleType]] as (string | undefined)[];
+            const validatedRoles = roles.filter((role) => role);
+            const printRoles = validatedRoles.map((role) => `<@&${role}>`).join(" ");
 
-                // Setting image
-                postData.image_url = (postData.image_url?.startsWith("//") ? "https:" : "") + postData.image_url;
+            // Setting image
+            postData.image_url = (postData.image_url?.startsWith("//") ? "https:" : "") + postData.image_url;
 
-                // Creating embed
-                const { embed, row } = await createEmbed(postData);
+            // Creating embed
+            const { embed, row } = await createEmbed(postData);
 
-                // Posting message
-                const message = await channel.send({
-                    content: printRoles,
-                    embeds: [embed],
-                    components: [row],
-                    allowedMentions: { roles: validatedRoles as string[] }
-                });
-                if (message.crosspostable) message.crosspost();
+            // Posting message
+            const message = await channel.send({
+                content: postData.ping_roles ? printRoles : "",
+                embeds: [embed],
+                components: [row],
+                allowedMentions: { roles: validatedRoles as string[] }
             });
+            if (message.crosspostable) await message.crosspost();
         })
-        .catch(() => {
-            console.log("[ForumNotifier] Failed to getGuildChannels()");
-        });
+    );
 };
 
 /**
@@ -338,7 +344,7 @@ const handlePosts = async (client: QClient, posts: PostData[]) => {
     const topics: PostData[] = posts.filter((post: PostData) => {
         if (!CATEGORIES_WATCHING.includes(post.category_id)) return false;
 
-        if (cachedPosts.includes(post.id)) return false;
+        if (CACHED_POSTS.includes(post.id)) return false;
 
         if ((Date.now() - new Date(post.created_at).getTime()) / MS_TO_MIN > 15) return false;
 
@@ -347,10 +353,10 @@ const handlePosts = async (client: QClient, posts: PostData[]) => {
 
     // Posting all valid topics
     if (!topics || topics.length <= 0) return;
-    topics.reverse().forEach((post) => {
-        cachedPosts.push(post.id);
-        if (cachedPosts.length > 10) cachedPosts.shift();
-        createPost(client, post);
+    topics.reverse().forEach((post, index) => {
+        CACHED_POSTS.push(post.id);
+        if (CACHED_POSTS.length > 10) CACHED_POSTS.shift();
+        createPost(client, { ...post, ping_roles: index <= 0 });
     });
 };
 
@@ -364,11 +370,11 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
         .then((result) => {
             // Handling invalid result
             if (!result.data) return;
-            if (result.status !== 200) return;
+            if (result.status < 200 || result.status > 200) return;
             throttleForum = false;
 
             // Remove oldest post from cache if reached max
-            if (cachedPosts.length > 10) cachedPosts.shift();
+            if (CACHED_POSTS.length > 10) CACHED_POSTS.shift();
             handlePosts(client, result.data.topic_list.topics);
         })
         .catch((err) => {
@@ -388,35 +394,58 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
 };
 
 /**
+ * Checks if a release note is valid and can be accessed.
+ * @param releaseNumber
+ * @returns
+ */
+const checkReleaseNoteValid = async (releaseNumber: string): Promise<boolean> => {
+    try {
+        const data = await axios.get(`${RELEASE_NOTES}${releaseNumber}`);
+
+        // Return if if the release note is valid
+        return data && data.status === 200;
+    } catch (e) {
+        console.info(`[ForumNotifier] Failed to access release notes (${RELEASE_NOTES}${releaseNumber}) Exception: ${e}`);
+        return false;
+    }
+};
+
+/**
  * Performs a get request on the create site for release notes,
  * uses the Next BuildID to get the site json for categories to determine
  * if a new release note is available on the 'current category' link
  */
-const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
+const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
     // Checking Client
     if (!CLIENT_ID) return;
+    const oldRelease = await getRecentRelease(CLIENT_ID);
+    const jsonDataUrl =
+        !oldRelease
+            ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
+            : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease >= 9999 ? 550 : oldRelease}.json`;
+    console.info("data uri: ", jsonDataUrl)
+    console.info("old Release: ", oldRelease)
+    console.info(">= 9999: ", oldRelease && oldRelease >= 9999)
 
     axios
-        .get(`https://create.roblox.com/docs/_next/data/${module.build_id}/getting-started.json`)
+        .get(jsonDataUrl)
         .then(async (result) => {
             // Handling invalid result
             if (!result.data) return;
-            if (result.status !== 200) return;
+            if (result.status < 200 || result.status > 200) return;
             throttleReleases = false;
 
             // Getting release paths
-            const navigation: NavElement[] = result.data.pageProps.data.navigation;
-            const resources: DocElement[] = navigation.find((element) => element.heading === "Resources")
+            const navigation: NavElement[] = result.data.pageProps.navigation.navigationContent;
+            const releaseNotes: DocElement[] = navigation.find((element) => element.heading === "Release Notes")
                 ?.navigation as DocElement[];
 
             // Getting relese note
-            const releaseNotes: DocElement | undefined = resources.find((element) => element.title === "Release Notes");
-            const currentRelease = releaseNotes?.section.find((element) => element.title === "Current Release");
+            const currentRelease = releaseNotes?.find((element) => element.title === "Current Release");
             const releaseNumber = currentRelease?.path?.split("-").pop();
             if (releaseNumber === undefined) return;
 
             // Checking release number
-            const oldRelease = await getRecentRelease(CLIENT_ID);
             const parsedReleaseNum = parseInt(releaseNumber);
             if (!oldRelease || (oldRelease && oldRelease >= 9999)) {
                 setRecentRelease(CLIENT_ID, parsedReleaseNum - 1);
@@ -424,36 +453,33 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
                 return;
             }
 
-            // Attempt to check if next release is available
-            let data;
-            try {
-                // eslint-disable-next-line prefer-const
-                data = await axios.get(
-                    `https://create.roblox.com/docs/resources/release-note/Release-Note-for-${releaseNumber}`
-                );
-            } catch (e) {
-                return;
-            }
-
-            // Return if we couldn't find the release note
-            if (!data || data.status !== 200) return;
+            // Ensuring release note is valid
+            if (!checkReleaseNoteValid(releaseNumber)) return;
 
             // Setting database
             setRecentRelease(CLIENT_ID, parsedReleaseNum);
 
             // Posting release
-            createPost(client, {
-                id: parsedReleaseNum,
-                fancy_title: `Release Notes for ${releaseNumber}`,
-                image_url: DEFAULT_IMAGE,
-                created_at: new Date().toISOString(),
-                category_id: Category.release_notes
-            });
+            let shouldPing = true;
+            for (let release = oldRelease ? oldRelease + 1 : parsedReleaseNum; release <= parsedReleaseNum; release++) {
+                // Check if post is valid
+                if (!checkReleaseNoteValid(release.toString())) continue;
+
+                // Make post
+                await createPost(client, {
+                    id: release,
+                    fancy_title: `Release Notes for ${release}`,
+                    image_url: DEFAULT_IMAGE,
+                    created_at: new Date().toISOString(),
+                    category_id: Category.release_notes,
+                    ping_roles: shouldPing
+                });
+                shouldPing = false;
+            }
         })
         .catch((err: AxiosError) => {
-            if (throttleReleases) {
+            if (throttleReleases || err.response?.status === 404) {
                 getNextBuildID(module);
-                return;
             }
             throttleReleases = true;
 
@@ -471,11 +497,19 @@ const pollReleaseNotes = (module: SubscribeDevforum, client: QClient) => {
 
 /**
  * @param callback method called on the schedule
- * @param getTime method called to get the timeout
+ * @param getTime method called to get the interval
  */
 const runScheduledCheck = (callback: () => number) => {
-    const timeout = callback();
-    setTimeout(runScheduledCheck, timeout, callback);
+    let intervalId: number | undefined;
+    const run = () => {
+        const interval = callback();
+        if (!intervalId || SCHEDULED_CHECKS[intervalId] !== interval) {
+            clearInterval(intervalId);
+            intervalId = setInterval(run, interval)[Symbol.toPrimitive]();
+            SCHEDULED_CHECKS[intervalId] = interval;
+        }
+    };
+    run();
 };
 
 /**
@@ -502,12 +536,10 @@ export class SubscribeDevforum extends Module {
             pollDevforum(this, client);
             return throttleForum ? 5 * 1000 * 60 : 1 * 1000 * 60;
         });
-        console.log("[ForumNotifier] Setup Forum Timer");
 
         runScheduledCheck(() => {
             pollReleaseNotes(this, client);
             return throttleReleases ? 5 * 1000 * 60 : 1 * 1000 * 60;
         });
-        console.log("[ForumNotifier] Setup Release Timer");
     }
 }
