@@ -34,7 +34,7 @@ export class execute extends QInteraction {
         await interaction.deferReply();
         const rawCode = interaction.targetMessage.content;
         const code = /```(?:([\w-]+)\n)?([\s\S]*?)```/gm.exec(rawCode)?.[2] ?? rawCode;
-        const child = fork(join(__dirname, "..", "languages", "luau.js"), [code], {
+        const child = fork(join(__dirname, "..", "utils", "languages", "luau.js"), [code], {
             silent: true,
             timeout: 2_500 /* 2.5s timeout, in case of stuff like while true do loops etc */,
             execArgv: ["--max-old-space-size=16"]

@@ -1,5 +1,5 @@
 // This is a child_process
-import luau from "../luau";
+import luau from "../../luau";
 
 luau.print = console.log;
 
