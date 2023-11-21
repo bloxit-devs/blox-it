@@ -169,7 +169,7 @@ const getNextBuildID = async (module: SubscribeDevforum) => {
     if (!CLIENT_ID) return;
     const previousRelease = await getRecentRelease(CLIENT_ID);
     const buildIdLink = previousRelease
-        ? `${RELEASE_NOTES}${previousRelease}`
+        ? `${RELEASE_NOTES}${previousRelease >= 9999 ? 550 : previousRelease}`
         : `https://create.roblox.com/docs/reference/engine`;
 
     return axios.get(buildIdLink, { responseType: "document", transformResponse: [(v) => v] }).then((res) => {
@@ -420,9 +420,12 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
     if (!CLIENT_ID) return;
     const oldRelease = await getRecentRelease(CLIENT_ID);
     const jsonDataUrl =
-        !oldRelease || (oldRelease && oldRelease >= 9999)
+        !oldRelease
             ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
-            : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease}.json`;
+            : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease >= 9999 ? 550 : oldRelease}.json`;
+    console.info("data uri: ", jsonDataUrl)
+    console.info("old Release: ", oldRelease)
+    console.info(">= 9999: ", oldRelease && oldRelease >= 9999)
 
     axios
         .get(jsonDataUrl)

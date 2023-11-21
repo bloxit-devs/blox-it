@@ -6,12 +6,12 @@ import { Table, Column, Model, Unique, AllowNull, DataType } from "sequelize-typ
 export class Bot extends Model {
     @Unique
     @Column(DataType.STRING)
-    clientID!: string;
+    declare clientID: string;
 
     @Unique
     @AllowNull
     @Column(DataType.INTEGER)
-    recentRelease?: number;
+    declare recentRelease?: number;
 }
 
 export async function getRecentRelease(clientID: string): Promise<number | null> {
