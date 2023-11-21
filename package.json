@@ -4,11 +4,12 @@
     "scripts": {
         "start": "yarn node --optimize_for_size --gc_interval=100 --max_old_space_size=920 dist/bot.js",
         "deploy": "yarn node dist/deploy.js",
-        "build": "yarn swc ./src -d dist --delete-dir-on-start && yarn node get-luau.js",
+        "build": "yarn swc ./src -d dist --delete-dir-on-start",
+        "get-luau": "yarn node get-luau.js",
         "dev": "cross-env-shell NODE_ENV=development \"yarn build && yarn deploy && yarn start\"",
         "type-check": "yarn tsc",
         "lint": "eslint \"src/**/*.ts\"",
-        "prettier": "prettier --write \"src/**/*.ts\""
+        "prettier": "prettier --write \"{get-luau,src/**/*}.{ts,js}\""
     },
     "dependencies": {
         "@hapi/boom": "^10.0.0",
