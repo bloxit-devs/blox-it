@@ -1,5 +1,5 @@
 // Implementation: https://github.com/daimond113/exectr-bot
-import { ContextMenuCommandBuilder, ApplicationCommandType, codeBlock } from "discord.js";
+import { ContextMenuCommandBuilder, ApplicationCommandType, codeBlock, escapeCodeBlock } from "discord.js";
 import { QInteraction } from "../utils/QInteraction";
 import { fork, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
@@ -42,8 +42,8 @@ export class execute extends QInteraction {
         const { stdoutEncoded, stderrEncoded } = await childClose(child);
 
         let string = "";
-        if (stdoutEncoded) string += `📝 Logs:\n${stdoutEncoded}\n`;
-        if (stderrEncoded) string += `❌ Errors:\n${stderrEncoded}\n`;
+        if (stdoutEncoded) string += `📝 Logs:\n${escapeCodeBlock(stdoutEncoded)}\n`;
+        if (stderrEncoded) string += `❌ Errors:\n${escapeCodeBlock(stderrEncoded)}\n`;
         interaction.editReply({
             content: codeBlock(string.substring(0, 1992 /* 2000 (max length) - 8 (the length of ```\n\n```) */)),
             allowedMentions: {
