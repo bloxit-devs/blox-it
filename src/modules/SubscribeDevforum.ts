@@ -423,9 +423,6 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
         !oldRelease
             ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
             : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease >= 9999 ? 550 : oldRelease}.json`;
-    console.info("data uri: ", jsonDataUrl)
-    console.info("old Release: ", oldRelease)
-    console.info(">= 9999: ", oldRelease && oldRelease >= 9999)
 
     axios
         .get(jsonDataUrl)

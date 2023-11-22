@@ -8,10 +8,11 @@
         "start": "node --optimize_for_size --gc_interval=100 --max_old_space_size=920 dist/bot.js",
         "deploy": "node dist/deploy.js",
         "build": "swc ./src -d dist --delete-dir-on-start",
-        "dev": "cross-env-shell NODE_ENV=development \"pnpm build && pnpm run deploy && pnpm start\"",
+        "get-luau": "node get-luau.js",
+        "dev": "cross-env-shell NODE_ENV=development \"pnpm build && pnpm run get-luau && pnpm run deploy && pnpm start\"",
         "type-check": "tsc",
         "lint": "eslint \"src/**/*.ts\"",
-        "prettier": "prettier --write \"src/**/*.ts\""
+        "prettier": "prettier --write \"{get-luau,src/**/*}.{ts,js}\""
     },
     "dependencies": {
         "@hapi/boom": "^10.0.0",
@@ -21,6 +22,7 @@
         "discord.js": "^14.11.0",
         "dotenv": "^16.0.1",
         "erlpack": "discord/erlpack",
+        "get-stream": "^6.0.1",
         "eslint-config-prettier": "^8.6.0",
         "eslint-plugin-prettier": "^4.2.1",
         "glob": "^8.0.3",
@@ -40,6 +42,7 @@
         "@swc/helpers": "^0.4.3",
         "@tsconfig/node18": "^1.0.1",
         "@tsconfig/recommended": "^1.0.1",
+        "@types/emscripten": "^1.39.6",
         "@types/eslint": "^8",
         "@types/glob": "^8",
         "@types/hapi__hapi": "^20",
