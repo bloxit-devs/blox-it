@@ -9,7 +9,7 @@
         "deploy": "node dist/deploy.js",
         "build": "swc ./src -d dist --delete-dir-on-start",
         "get-luau": "node get-luau.js",
-        "dev": "cross-env-shell NODE_ENV=development \"pnpm build && pnpm run deploy && pnpm start\"",
+        "dev": "cross-env-shell NODE_ENV=development \"pnpm build && pnpm run get-luau && pnpm run deploy && pnpm start\"",
         "type-check": "tsc",
         "lint": "eslint \"src/**/*.ts\"",
         "prettier": "prettier --write \"{get-luau,src/**/*}.{ts,js}\""
