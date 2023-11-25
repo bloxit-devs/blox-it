@@ -1,4 +1,6 @@
-import { QClient } from "./utils/QClient";
+import { dirname } from "node:path";
+import { QClient } from "./utils/QClient.js";
+import { fileURLToPath } from "node:url";
 
 // Create bot
 const client = new QClient({
@@ -7,6 +9,8 @@ const client = new QClient({
         parse: ["users", "roles"]
     }
 });
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Load client
 client.login();

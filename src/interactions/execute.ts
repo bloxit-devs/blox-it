@@ -1,29 +1,12 @@
-// Implementation: https://github.com/daimond113/exectr-bot
 import { ContextMenuCommandBuilder, ApplicationCommandType, codeBlock, escapeCodeBlock } from "discord.js";
-import { QInteraction } from "../utils/QInteraction";
-import { fork, type ChildProcess } from "node:child_process";
-import { join } from "node:path";
-import { once } from "node:events";
-import { PassThrough } from "node:stream";
-import getStream from "get-stream";
+import { QInteraction } from "../utils/QInteraction.js";
+import { dirname, join } from "node:path";
+import { execa } from "execa";
+import { temporaryWriteTask } from "tempy";
+import { fileURLToPath } from "node:url";
+import pidusage from "pidusage";
 
-type ClosedChildProcess = Pick<ChildProcess, "exitCode" | "signalCode"> & {
-    stdoutEncoded: string;
-    stderrEncoded: string;
-};
-
-async function childClose(child: ChildProcess): Promise<ClosedChildProcess> {
-    const [, stdoutEncoded, stderrEncoded] = await Promise.all([
-        once(child, "close"),
-        getStream(child.stdout ?? new PassThrough()),
-        getStream(child.stderr ?? new PassThrough())
-    ]);
-    return {
-        ...child,
-        stdoutEncoded: stdoutEncoded as string,
-        stderrEncoded: stderrEncoded as string
-    };
-}
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export class execute extends QInteraction {
     public constructor() {
@@ -32,23 +15,54 @@ export class execute extends QInteraction {
 
     public async execute(client: QInteraction.Client, interaction: QInteraction.MessageContext) {
         await interaction.deferReply();
+
         const rawCode = interaction.targetMessage.content;
         const code = /```(?:([\w-]+)\n)?([\s\S]*?)```/gm.exec(rawCode)?.[2] ?? rawCode;
-        const child = fork(join(__dirname, "..", "utils", "languages", "luau.js"), [code], {
-            silent: true,
-            timeout: 2_500 /* 2.5s timeout, in case of stuff like while true do loops etc */,
-            execArgv: ["--max-old-space-size=16"]
-        });
-        const { stdoutEncoded, stderrEncoded } = await childClose(child);
 
-        let string = "";
-        if (stdoutEncoded) string += `📝 Logs:\n${escapeCodeBlock(stdoutEncoded)}\n`;
-        if (stderrEncoded) string += `❌ Errors:\n${escapeCodeBlock(stderrEncoded)}\n`;
-        interaction.editReply({
-            content: codeBlock(string.substring(0, 1992 /* 2000 (max length) - 8 (the length of ```\n\n```) */)),
-            allowedMentions: {
-                parse: []
-            }
-        });
+        await temporaryWriteTask(
+            code,
+            async (filePath) => {
+                const cancelSignal = new AbortController();
+
+                const subprocess = execa(`./luau`, [filePath], {
+                    timeout: 2_500 /* 2.5s timeout, in case of stuff like while true do loops etc */,
+                    cwd: join(__dirname, "..", "utils", "languages", "luau"),
+                    signal: cancelSignal.signal
+                });
+
+                // https://github.com/sindresorhus/execa/issues/205#issuecomment-484235713
+                const maxRAMBytes = 16 * 1000000;
+
+                const ramMonitorInterval = setInterval(ramMonitor, 100);
+                async function ramMonitor() {
+                    try {
+                        const { memory } = await pidusage(subprocess.pid!);
+                        if (memory > maxRAMBytes) {
+                            clearInterval(ramMonitorInterval);
+                            cancelSignal.abort("Out of memory");
+                        }
+                    } catch {
+                        /* empty */
+                    }
+                }
+
+                const { stdout, stderr } = await subprocess.catch((e) =>
+                    e.isCanceled ? { ...e, stderr: "Out of memory" } : e
+                );
+                clearInterval(ramMonitorInterval);
+
+                let string = "";
+                if (stdout) string += `📝 Logs:\n${escapeCodeBlock(stdout)}\n`;
+                if (stderr) string += `❌ Errors:\n${escapeCodeBlock(stderr)}\n`;
+
+                await interaction.editReply({
+                    content: codeBlock(string.substring(0, 1992 /* 2000 (max length) - 8 (the length of ```\n\n```) */)),
+                    allowedMentions: {
+                        parse: []
+                    }
+                });
+            },
+            { extension: ".luau" }
+        );
     }
 }

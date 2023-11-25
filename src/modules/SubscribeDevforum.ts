@@ -1,8 +1,8 @@
 import axios, { AxiosError } from "axios";
-import { QClient } from "../utils/QClient";
-import { Module } from "../utils/QModule";
-import { getGuildChannels } from "../models/Guild";
-import { getRecentRelease, setRecentRelease } from "../models/Bot";
+import { QClient } from "../utils/QClient.js";
+import { Module } from "../utils/QModule.js";
+import { getGuildChannels } from "../models/Guild.js";
+import { getRecentRelease, setRecentRelease } from "../models/Bot.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedAuthorOptions, EmbedBuilder, TextChannel } from "discord.js";
 import { config } from "dotenv";
 import { parseDocument, DomUtils } from "htmlparser2";
@@ -419,10 +419,11 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
     // Checking Client
     if (!CLIENT_ID) return;
     const oldRelease = await getRecentRelease(CLIENT_ID);
-    const jsonDataUrl =
-        !oldRelease
-            ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
-            : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease >= 9999 ? 550 : oldRelease}.json`;
+    const jsonDataUrl = !oldRelease
+        ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
+        : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${
+              oldRelease >= 9999 ? 550 : oldRelease
+          }.json`;
 
     axios
         .get(jsonDataUrl)

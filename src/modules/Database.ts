@@ -1,6 +1,11 @@
-import { Module } from "../utils/QModule";
-import { Sequelize } from "sequelize-typescript";
-import path from "path";
+import { Module } from "../utils/QModule.js";
+import { ModelCtor, Sequelize } from "sequelize-typescript";
+import { parse } from "node:path/posix";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import glob from "fast-glob";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export class Database extends Module {
     public sqlize?: Sequelize;
@@ -14,13 +19,30 @@ export class Database extends Module {
             return;
         }
 
+        this.setupDatabase();
+    }
+
+    private async setupDatabase(): Promise<void> {
         // Load database from env
         try {
+            const models: ModelCtor[] = await glob(
+                join(__dirname, "..", "models").replaceAll("\\", "/") + "/*.{ts,js}"
+            ).then((files) =>
+                Promise.all(
+                    files.map(async (file) => {
+                        const name = parse(file).name;
+                        const data = await import(pathToFileURL(file).toString());
+
+                        return data[name] || data.default;
+                    })
+                )
+            );
+
             this.sqlize = new Sequelize({
                 dialect: "sqlite",
                 logging: false,
-                storage: path.join("./", process.env.DB_PATH),
-                models: [path.join(__dirname, "../models/*.ts"), path.join(__dirname, "../models/*.js")]
+                storage: join("./", process.env.DB_PATH!),
+                models
             });
         } catch (error) {
             console.warn(`[DB] Failed to load database: ${error}`);

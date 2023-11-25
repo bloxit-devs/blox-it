@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import { getGuild } from "../../models/Guild";
-import { QInteraction } from "../../utils/QInteraction";
-import { updateAccount } from "./verify";
+import { getGuild } from "../../models/Guild.js";
+import { QInteraction } from "../../utils/QInteraction.js";
+import { updateAccount } from "./verify.js";
 
 export class update extends QInteraction {
     public constructor() {

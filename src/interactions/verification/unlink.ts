@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import { getGuild } from "../../models/Guild";
-import { unlinkAccount } from "../../models/User";
-import { QInteraction } from "../../utils/QInteraction";
-import { removeRoles } from "./verify";
+import { getGuild } from "../../models/Guild.js";
+import { unlinkAccount } from "../../models/User.js";
+import { QInteraction } from "../../utils/QInteraction.js";
+import { removeRoles } from "./verify.js";
 
 export class unlink extends QInteraction {
     public constructor() {

@@ -1,5 +1,5 @@
-import { PostEvent } from "../utils/events/PostEvent";
-import { QEvent } from "../utils/events/BaseEvent";
+import { PostEvent } from "../utils/events/PostEvent.js";
+import { QEvent } from "../utils/events/BaseEvent.js";
 import { Interaction, InteractionType as IType } from "discord.js";
 
 export class PostInteractionCreate extends PostEvent {

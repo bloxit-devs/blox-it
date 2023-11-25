@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { QInteraction } from "../../utils/QInteraction";
+import { QInteraction } from "../../utils/QInteraction.js";
 
 export class fight extends QInteraction {
     public constructor() {

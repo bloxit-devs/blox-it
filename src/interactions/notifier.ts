@@ -1,6 +1,6 @@
 import { ChannelType, PermissionFlagsBits as Perms, SlashCommandBuilder } from "discord.js";
-import { QInteraction } from "../utils/QInteraction";
-import { setNotifyChannels, setNotifyRoles } from "../models/Guild";
+import { QInteraction } from "../utils/QInteraction.js";
+import { setNotifyChannels, setNotifyRoles } from "../models/Guild.js";
 
 export class notifier extends QInteraction {
     public constructor() {

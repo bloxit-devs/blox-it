@@ -1,6 +1,6 @@
 import axios from "axios";
 import { EmbedBuilder } from "discord.js";
-import { Module } from "../utils/QModule";
+import { Module } from "../utils/QModule.js";
 
 type UserResponse =
     | {

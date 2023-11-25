@@ -1,12 +1,13 @@
 import { Client, Collection, ClientOptions, ClientEvents } from "discord.js";
-import { QInteraction } from "./QInteraction";
-import { QEvent, ClientEvent } from "./events/BaseEvent";
-import { PreEvent } from "./events/PreEvent";
-import { PostEvent } from "./events/PostEvent";
+import { QInteraction } from "./QInteraction.js";
+import { QEvent, ClientEvent } from "./events/BaseEvent.js";
+import { PreEvent } from "./events/PreEvent.js";
+import { PostEvent } from "./events/PostEvent.js";
 import { config } from "dotenv";
-import path from "path";
-import { Module } from "./QModule";
-import glob from "glob";
+import path from "node:path";
+import { Module } from "./QModule.js";
+import glob from "fast-glob";
+import { pathToFileURL } from "node:url";
 
 config();
 const IS_DEVELOPMENT = process.env.NODE_ENV === "development" || process.env.TS_NODE_DEV;
@@ -52,22 +53,19 @@ export class QClient extends Client {
     private async loadFiles(dir: string): Promise<any> {
         dir = path.normalize(dir).split(path.sep).join("/");
 
-        return new Promise((resolve) => {
-            const translatedFiles: any[] = [];
-            glob(`${dir}/**/*.js`, (err, files) => {
-                files.forEach(async (file) => {
-                    const name = path.parse(file.toString()).name;
-                    const data = await import(`${file.toString()}`);
-                    if (!data[name] || data.default) return;
+        const files = await glob(`${dir}/**/*.js`);
 
-                    const dataClass = new (data[name] || data.default)(this);
-                    dataClass.name = dataClass.name === "module" ? name : dataClass.name;
-                    translatedFiles.push(dataClass);
-                });
+        return await Promise.all(
+            files.map(async (file) => {
+                const name = path.parse(file).name;
+                const data = await import(pathToFileURL(file).toString());
+                if (!data[name] || data.default) return;
 
-                resolve(translatedFiles);
-            });
-        });
+                const dataClass = new (data[name] || data.default)(this);
+                dataClass.name = dataClass.name === "module" ? name : dataClass.name;
+                return dataClass;
+            })
+        );
     }
 
     /**

@@ -1,4 +1,4 @@
-import { ClientEvent, QEvent } from "./BaseEvent";
+import { ClientEvent, QEvent } from "./BaseEvent.js";
 
 export class PreEvent extends ClientEvent {
     public constructor(event: QEvent.QClientEvents) {

@@ -185,5 +185,5 @@ export namespace QInteraction {
     export type Button = ButtonInteraction;
     export type Autocomplete = AutocompleteInteraction;
     export type ModalSubmit = ModalSubmitInteraction;
-    export type Client = import("./QClient").QClient;
+    export type Client = import("./QClient.js").QClient;
 }

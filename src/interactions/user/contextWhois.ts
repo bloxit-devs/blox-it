@@ -1,7 +1,7 @@
 import { ContextMenuCommandBuilder, ApplicationCommandType } from "discord.js";
-import { getRobloxID } from "../../models/User";
-import { Roblox } from "../../modules/Roblox";
-import { QInteraction } from "../../utils/QInteraction";
+import { getRobloxID } from "../../models/User.js";
+import { Roblox } from "../../modules/Roblox.js";
+import { QInteraction } from "../../utils/QInteraction.js";
 
 export class contextWhois extends QInteraction {
     public constructor() {

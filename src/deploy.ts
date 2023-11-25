@@ -1,7 +1,9 @@
 import { REST, Routes } from "discord.js";
 import { config } from "dotenv";
-import path from "path";
-import glob from "glob";
+import { dirname, join } from "node:path";
+import { parse } from "node:path/posix";
+import glob from "fast-glob";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 config();
 const IS_DEVELOPMENT = process.env.NODE_ENV === "development" || process.env.TS_NODE_DEV;
@@ -15,17 +17,14 @@ if (!CUR_TOKEN) throw new Error("No token found");
 // Construct and prepare an instance of the REST module
 const rest = new REST({ version: "10" }).setToken(CUR_TOKEN);
 
-const dir = path
-    .normalize(__dirname + "/interactions")
-    .split(path.sep)
-    .join("/");
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-glob(dir + "/**/*.js", async (err, files) => {
+glob(join(__dirname, "interactions/**/*.js").replaceAll("\\", "/")).then(async (files) => {
     // eslint-disable-next-line promise/no-promise-in-callback
     const commands = await Promise.all(
         files.map(async (file) => {
-            const name = path.parse(file.toString()).name;
-            const data = await import(file.toString());
+            const name = parse(file).name;
+            const data = await import(pathToFileURL(file).toString());
             return new data[name]().toJSON();
         })
     );

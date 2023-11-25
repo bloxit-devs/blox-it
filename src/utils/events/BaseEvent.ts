@@ -1,4 +1,4 @@
-import { QClient } from "../QClient";
+import { QClient } from "../QClient.js";
 import { Collection } from "discord.js";
 
 export class ClientEvent {
@@ -52,5 +52,5 @@ export interface EventOptions {
 export namespace QEvent {
     export type EventResult = any | any[];
     export type QClientEvents = `${import("discord.js").Events}`;
-    export type QClient = import("../QClient").QClient;
+    export type QClient = import("../QClient.js").QClient;
 }

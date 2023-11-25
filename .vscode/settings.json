@@ -8,5 +8,7 @@
     "yarn.lock": true
   },
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "files.eol": "\n"
+  "files.eol": "\n",
+  "prettier.configPath": ".prettierrc",
+  "prettier.prettierPath": "node_modules/prettier/index.cjs"
 }

@@ -12,11 +12,11 @@ import {
     TextInputStyle,
     GuildMember
 } from "discord.js";
-import { QInteraction } from "../../utils/QInteraction";
-import { VerificationSettings, updateVerifySettings, getGuild, Guild } from "../../models/Guild";
-import { verifyCode } from "../../models/Code";
-import { getRobloxID, linkAccount, unlinkAccount } from "../../models/User";
-import { Roblox } from "../../modules/Roblox";
+import { QInteraction } from "../../utils/QInteraction.js";
+import { VerificationSettings, updateVerifySettings, getGuild, Guild } from "../../models/Guild.js";
+import { verifyCode } from "../../models/Code.js";
+import { getRobloxID, linkAccount, unlinkAccount } from "../../models/User.js";
+import { Roblox } from "../../modules/Roblox.js";
 
 export async function removeRoles(guild: Guild, user: GuildMember): Promise<boolean> {
     try {

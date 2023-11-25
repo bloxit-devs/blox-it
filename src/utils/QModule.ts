@@ -1,4 +1,4 @@
-import { QClient } from "./QClient";
+import { QClient } from "./QClient.js";
 
 export abstract class Module {
     public name: string;

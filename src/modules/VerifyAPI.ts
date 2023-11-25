@@ -1,10 +1,10 @@
-import { Module } from "../utils/QModule";
+import { Module } from "../utils/QModule.js";
 import Hapi from "@hapi/hapi";
 import Boom from "@hapi/boom";
 import Joi from "joi";
-import { checkBanned } from "../models/User";
-import { getCode, purgeOldCodes } from "../models/Code";
-import { QClient } from "src/utils/QClient";
+import { checkBanned } from "../models/User.js";
+import { getCode, purgeOldCodes } from "../models/Code.js";
+import { QClient } from "src/utils/QClient.js";
 
 type APIRequest = {
     payload: {

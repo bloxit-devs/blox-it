@@ -1,6 +1,6 @@
 import { Message } from "discord.js";
-import { PreEvent } from "../utils/events/PreEvent";
-import { QEvent } from "../utils/events/BaseEvent";
+import { PreEvent } from "../utils/events/PreEvent.js";
+import { QEvent } from "../utils/events/BaseEvent.js";
 
 export class PreMessageCreate extends PreEvent {
     public constructor() {

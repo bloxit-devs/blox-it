@@ -1,8 +1,8 @@
 import { GuildMember } from "discord.js";
-import { QEvent } from "../utils/events/BaseEvent";
-import { PreEvent } from "../utils/events/PreEvent";
-import { updateAccount } from "../interactions/verification/verify";
-import { getGuild } from "../models/Guild";
+import { QEvent } from "../utils/events/BaseEvent.js";
+import { PreEvent } from "../utils/events/PreEvent.js";
+import { updateAccount } from "../interactions/verification/verify.js";
+import { getGuild } from "../models/Guild.js";
 
 export class PreMemberJoin extends PreEvent {
     public constructor() {
