@@ -46,7 +46,6 @@
         "@swc/helpers": "^0.5.3",
         "@tsconfig/node18": "^18.2.2",
         "@tsconfig/recommended": "^1.0.1",
-        "@types/emscripten": "^1.39.6",
         "@types/eslint": "^8",
         "@types/node": "^18.11.9",
         "@types/pidusage": "^2.0.5",
