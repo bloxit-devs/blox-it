@@ -1,37 +1,35 @@
-import { Table, Column, Model, Unique, AllowNull, DataType } from "sequelize-typescript";
+import { Table, Column, Model, Unique, AllowNull, DataType } from "sequelize-typescript"
 
-@Table({
-    timestamps: false
-})
+@Table({ timestamps: false })
 export class Bot extends Model {
     @Unique
     @Column(DataType.STRING)
-    declare clientID: string;
+    declare clientID: string
 
     @Unique
     @AllowNull
     @Column(DataType.INTEGER)
-    declare recentRelease?: number;
+    declare recentRelease?: number
 }
 
 export async function getRecentRelease(clientID: string): Promise<number | null> {
     try {
-        const entry = await Bot.findOne({ where: { clientID: clientID } });
-        return entry?.recentRelease ?? 9999;
+        const entry = await Bot.findOne({ where: { clientID: clientID } })
+        return entry?.recentRelease ?? 9999
     } catch (err) {
-        return null;
+        return null
     }
 }
 
 export async function setRecentRelease(clientID: string, release: number) {
     try {
-        const [entry] = await Bot.findOrCreate({ where: { clientID: clientID } });
+        const [entry] = await Bot.findOrCreate({ where: { clientID: clientID } })
 
-        entry.recentRelease = release;
-        await entry.save();
+        entry.recentRelease = release
+        await entry.save()
 
-        return true;
+        return true
     } catch (err) {
-        return null;
+        return null
     }
 }
