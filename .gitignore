@@ -142,3 +142,6 @@ ecosystem.config.js
 **/*.db
 **/*.sqlite
 **/*.db-journal
+
+# Project Files
+*.txt

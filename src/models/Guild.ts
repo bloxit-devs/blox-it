@@ -37,6 +37,11 @@ export class Guild extends Model {
     @Column(DataType.STRING)
     declare rbxReleases?: string | null;
 
+    /* Status */
+    @AllowNull
+    @Column(DataType.STRING)
+    statusFeed?: string | null;
+
     /* Reaction Roles */
     @AllowNull
     @Column(DataType.STRING)
@@ -97,7 +102,8 @@ export async function getGuildChannels(): Promise<Guild[]> {
         where: {
             [Op.or]: {
                 rbxUpdates: { [Op.ne]: null },
-                rbxReleases: { [Op.ne]: null }
+                rbxReleases: { [Op.ne]: null },
+                statusFeed: { [Op.ne]: null }
             }
         }
     });
@@ -109,13 +115,38 @@ export async function getGuildChannels(): Promise<Guild[]> {
  * @param rbxUpdates The roblox update channel ID
  * @param rbxReleases The roblox release channel ID
  */
-export async function setNotifyChannels(guildID: string | number, channelType: notifyChannel, channelID: string | null) {
+export async function setNotifyChannels(
+    guildID: string | number,
+    channelType: notifyChannel,
+    channelID: string | null
+): Promise<boolean> {
     const [guild] = await Guild.findOrCreate({
         where: { guildID: guildID.toString() }
     });
 
     // Setting role
     guild[channelType] = channelID;
+
+    try {
+        await guild.save();
+    } catch (err) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Sets the status feed channel for the specified guild
+ * @param guildID The target guild ID
+ * @param channel The discord channel ID for status posts
+ */
+export async function setStatusChannel(guildID: string | number, channel: string | null): Promise<boolean> {
+    const [guild] = await Guild.findOrCreate({
+        where: { guildID: guildID.toString() }
+    });
+
+    guild.statusFeed = channel;
 
     try {
         await guild.save();
