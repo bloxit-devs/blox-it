@@ -10,7 +10,7 @@ import { parseDocument, DomUtils } from "htmlparser2"
 
 /* Announcements, News/Alerts, Release Notes */
 const CATEGORIES_WATCHING = [36, 193]
-const RELEASE_NOTES = "https://create.roblox.com/docs/release-notes/release-notes-"
+const RELEASE_NOTES = "https://create.roblox.com/docs/updates/"
 const FORUM_LINK = "https://devforum.roblox.com/c/updates/45.json"
 const DEFAULT_IMAGE = "https://devforum-uploads.s3.dualstack.us-east-2.amazonaws.com/uploads/original/4X/c/e/2/ce2bb810f2a76b08be421b703f7f0e20750a6004.png"
 const MS_TO_DAY = 1000 * 60 * 60 * 24
@@ -20,7 +20,7 @@ const IS_DEVELOPMENT = process.env.NODE_ENV === "development" || process.env.TS_
 const CLIENT_ID = IS_DEVELOPMENT ? process.env.DEV_CLIENT_ID : process.env.CLIENT_ID
 
 const SCHEDULED_CHECKS: Record<number, number> = []
-const CACHED_POSTS: Array<number> = []
+const CACHED_POSTS: Set<string> = new Set()
 
 let throttleForum = false
 let throttleReleases = false
@@ -49,7 +49,7 @@ enum Category {
  * The data of a topic or release note
  */
 type PostData = {
-    id: number
+    id: string
     fancy_title: string
     image_url: string
     created_at: string
@@ -165,39 +165,35 @@ const decodeHTML = (encodedString: string): string => {
 /**
  * Gets the Build ID for the documentation
  */
-const getNextBuildID = async (module: SubscribeDevforum, releaseNum?: string) => {
+const getNextBuildID = async (module: SubscribeDevforum) => {
     if (!CLIENT_ID) return
+
     const previousRelease = await getRecentRelease(CLIENT_ID)
-    const validRelease = previousRelease && await checkReleaseNoteValid(previousRelease.toString())
-    const buildIdLink = validRelease
-        ? `${RELEASE_NOTES}${releaseNum || (previousRelease >= 9999 ? 550 : previousRelease)}`
-        : `https://create.roblox.com/docs/reference/engine`
 
-    return axios.get(buildIdLink, { responseType: "document", transformResponse: [(v) => v] }).then((res) => {
-        // Handling invalid result
-        if (!res.data) return
-        if (res.status !== 200) return
+    let buildIdLink = 'https://create.roblox.com/docs/reference/engine'
+    if (previousRelease && await checkReleaseNoteValid(previousRelease)) {
+        const releaseDateStr = (new Date(previousRelease)).toISOString().split('T').shift()
+        buildIdLink = `${RELEASE_NOTES}${releaseDateStr}`
+    }
 
-        const document = parseDocument(res.data)
-        const elements = DomUtils.findOne((element) => {
-            return element.attribs.id === "__NEXT_DATA__"
-        }, document.childNodes)
-        const element: any = elements?.children[0]
-        const elementData = JSON.parse(element.data)
+    return axios.get(buildIdLink, { responseType: "document", transformResponse: [(v) => v] })
+        .then((res) => {
+            // Handling invalid result
+            if (!res.data) return
+            if (res.status !== 200) return
 
-        module.build_id = elementData.buildId
-        return elementData.buildId
-    }).catch(() => {
-        if (previousRelease) {
-            let startVal = module.build_id
-            for (let release = previousRelease; release >= previousRelease - 5; release--) {
-                getNextBuildID(module, release.toString())
-                if (startVal !== module.build_id)
-                    return
-            }
-        }
-        console.info("failed to get build id")
-    })
+            const document = parseDocument(res.data)
+            const elements = DomUtils.findOne((element) => {
+                return element.attribs.id === "__NEXT_DATA__"
+            }, document.childNodes)
+            const element: any = elements?.children[0]
+            const elementData = JSON.parse(element.data)
+
+            module.build_id = elementData.buildId
+            return elementData.buildId
+        }).catch(() => {
+            console.info("failed to get build id")
+        })
 }
 
 /**
@@ -306,7 +302,7 @@ const createPost = async (client: QClient, postData: PostData) => {
     return Promise.all(
         guilds.map(async (guildInfo) => {
             // Adding post to cache
-            if (!CACHED_POSTS.includes(postData.id)) CACHED_POSTS.push(postData.id)
+            if (!CACHED_POSTS.has(postData.id)) CACHED_POSTS.add(postData.id)
 
             // Getting guilds to post in
             const guild = await client.guilds.fetch(guildInfo.guildID)
@@ -356,13 +352,13 @@ const handlePosts = async (client: QClient, posts: PostData[]) => {
         if (!CATEGORIES_WATCHING.includes(post.category_id)) return false
 
         /* fast skip of cache */
-        if (CACHED_POSTS.includes(post.id)) return false
+        if (CACHED_POSTS.has(post.id)) return false
 
         /* things older than 2 days should be hard-skipped */
         if ((Date.now() - new Date(post.created_at).getTime()) / MS_TO_DAY >= 2) return false
 
         /* check db */
-        const exists = await checkPostExists(post.id)
+        const exists = await checkPostExists(parseInt(post.id))
         if (exists) return false
 
         return post
@@ -373,13 +369,12 @@ const handlePosts = async (client: QClient, posts: PostData[]) => {
     // Posting all valid topics
     if (!topics || topics.length <= 0) return
     topics.reverse().forEach((post, index) => {
-        CACHED_POSTS.push(post.id)
-        if (CACHED_POSTS.length > 10) CACHED_POSTS.shift()
+        CACHED_POSTS.add(post.id)
         createPost(client, { ...post, ping_roles: index <= 0 })
     })
 
     // Add posts to db
-    await addPosts(topics)
+    await addPosts(topics.map(t => ({ ...t, id: parseInt(t.id) })))
 }
 
 /**
@@ -396,7 +391,6 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
             throttleForum = false
 
             // Remove oldest post from cache if reached max
-            if (CACHED_POSTS.length > 10) CACHED_POSTS.shift()
             handlePosts(client, result.data.topic_list.topics)
         })
         .catch((err) => {
@@ -404,9 +398,7 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
             throttleForum = true
 
             if (err.response) {
-                console.log(
-                    `[ForumNotifier] Failed to retrieve devforum posts - server responded with ${err.response.status}: (${err.response.data})`
-                )
+                console.log(`[ForumNotifier] Failed to retrieve devforum posts - server responded with ${err.response.status}: (${err.response.data})`)
             } else if (err.request) {
                 console.log(`[ForumNotifier] Failed to retrieve devforum posts - no response: (${err.request})`)
             } else {
@@ -420,13 +412,16 @@ const pollDevforum = (module: SubscribeDevforum, client: QClient) => {
  * @param releaseNumber
  * @returns
  */
-const checkReleaseNoteValid = async (releaseNumber: string): Promise<boolean> => {
+const checkReleaseNoteValid = async (releaseDate: number): Promise<boolean> => {
+    if (releaseDate < 1000) return false /* old release note id no longer valid */
+    const releaseDateStr = (new Date(releaseDate)).toISOString().split('T').shift()
+
     try {
         // Return if if the release note is valid
-        const data = await axios.get(`${RELEASE_NOTES}${releaseNumber}`)
+        const data = await axios.get(`${RELEASE_NOTES}${releaseDateStr}`)
         return data && data.status === 200
     } catch (e) {
-        console.info(`[ForumNotifier] Failed to access release notes (${RELEASE_NOTES}${releaseNumber}) Exception: ${e}`)
+        console.info(`[ForumNotifier] Failed to access release notes (${RELEASE_NOTES}${releaseDateStr}) Exception: ${e}`)
         return false
     }
 }
@@ -440,10 +435,12 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
     // Checking Client
     if (!CLIENT_ID) return
     const oldRelease = await getRecentRelease(CLIENT_ID)
-    const jsonDataUrl =
-        !oldRelease
-            ? `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
-            : `https://create.roblox.com/docs/_next/data/${module.build_id}/release-notes/release-notes-${oldRelease >= 9999 ? 550 : oldRelease}.json`
+
+    let jsonDataUrl = `https://create.roblox.com/docs/_next/data/${module.build_id}/reference/engine.json`
+    if (oldRelease && oldRelease > 1000) {
+        const oldReleaseDateStr = (new Date(oldRelease)).toISOString().split('T').shift()
+        jsonDataUrl = `https://create.roblox.com/docs/_next/data/${module.build_id}/updates/${oldReleaseDateStr}.json`
+    }
 
     axios
         .get(jsonDataUrl)
@@ -455,43 +452,44 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
 
             // Getting release paths
             const navigation: NavElement[] = result.data.pageProps.navigation.navigationContent
-            const releaseNotes: DocElement[] = navigation.find((element) => element.heading === "Release Notes")
+            const releaseNotes: DocElement[] = navigation.find((element) => element.heading.toLowerCase().includes("release notes"))
                 ?.navigation as DocElement[]
 
             // Getting relese note
-            const currentRelease = releaseNotes?.find((element) => element.title === "Current Release")
-            const releaseNumber = currentRelease?.path?.split("-").pop()
-            if (releaseNumber === undefined) return
+            const currentRelease = releaseNotes?.find((element) => element.title.toLowerCase().includes("current"))
+            const releaseDateStr = currentRelease?.path?.split("/").pop()
+            if (releaseDateStr == null) return
 
             // Checking release number
-            const parsedReleaseNum = parseInt(releaseNumber)
-            if (!oldRelease || (oldRelease && oldRelease >= 9999)) {
-                setRecentRelease(CLIENT_ID, parsedReleaseNum - 1)
-            } else if (oldRelease && oldRelease >= parsedReleaseNum) {
+            const releaseDate = (new Date(releaseDateStr)).getTime()
+            if (oldRelease && oldRelease >= releaseDate) {
                 return
             }
 
             // Ensuring release note is valid
-            if (!checkReleaseNoteValid(releaseNumber)) return
+            if (!checkReleaseNoteValid(releaseDate)) return
 
             // Setting database
-            setRecentRelease(CLIENT_ID, parsedReleaseNum)
+            setRecentRelease(CLIENT_ID, releaseDate)
 
             // Posting release
             let shouldPing = true
-            for (let release = oldRelease ? oldRelease + 1 : parsedReleaseNum; release <= parsedReleaseNum; release++) {
+            const lastRelease = oldRelease && oldRelease > 1000 ? oldRelease : releaseDate
+            for (let release = lastRelease; release <= releaseDate; release += MS_TO_DAY) {
                 // Check if post is valid
-                if (!checkReleaseNoteValid(release.toString())) continue
+                if (!checkReleaseNoteValid(release)) continue
 
                 // Make post
+                const releaseDateStr = (new Date(releaseDate)).toISOString().split('T').shift()!
                 await createPost(client, {
-                    id: release,
-                    fancy_title: `Release Notes for ${release}`,
+                    id: releaseDateStr,
+                    fancy_title: `Release Notes for ${releaseDateStr}`,
                     image_url: DEFAULT_IMAGE,
                     created_at: new Date().toISOString(),
                     category_id: Category.release_notes,
                     ping_roles: shouldPing
                 })
+
                 shouldPing = false
             }
         })
@@ -499,12 +497,10 @@ const pollReleaseNotes = async (module: SubscribeDevforum, client: QClient) => {
             if (throttleReleases || err.response?.status === 404) {
                 getNextBuildID(module)
             }
-            throttleReleases = true
 
+            throttleReleases = true
             if (err.response) {
-                console.log(
-                    `[ForumNotifier] Failed to retrieve release notes - server responded with ${err.response.status})`
-                )
+                console.log(`[ForumNotifier] Failed to retrieve release notes - server responded with ${err.response.status})`)
             } else if (err.request) {
                 console.log(`[ForumNotifier] Failed to retrieve release notes - no response: (${err.request})`)
             } else {
@@ -564,6 +560,7 @@ export class SubscribeDevforum extends Module {
 
         runScheduledCheck(() => {
             clearPosts()
+            CACHED_POSTS.clear()
             /* 1day */
             return 1 * 1000 * 60 * 60 * 24
         })
