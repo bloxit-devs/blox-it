@@ -142,22 +142,22 @@ export class QClient extends Client {
             const evnt = event as keyof ClientEvents;
 
             if (this.listeners(evnt).length > 0) return;
-            this.on(evnt, (...args: any[]) => {
+            this.on(evnt, async (...args: any[]) => {
                 const newArgs: QEvent.EventResult = args;
                 if (callbackTable.pre && callbackTable.pre.execute) {
                     if (
-                        !Array.isArray(newArgs)
+                        !(await (Array.isArray(newArgs)
                             ? callbackTable.pre.execute(this, ...newArgs)
-                            : callbackTable.pre.execute(this, newArgs)
+                            : callbackTable.pre.execute(this, newArgs)))
                     )
                         return;
                 }
 
                 // Fire post events
                 if (callbackTable.post && callbackTable.post.length > 0) {
-                    callbackTable.post.forEach((val) => {
+                    callbackTable.post.forEach(async (val) => {
                         if (!val.execute) return;
-                        Array.isArray(newArgs) ? val.execute(this, ...newArgs) : val.execute(this, newArgs);
+                        await (Array.isArray(newArgs) ? val.execute(this, ...newArgs) : val.execute(this, newArgs));
                     });
                 }
             });
