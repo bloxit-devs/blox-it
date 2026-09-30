@@ -3,6 +3,11 @@ FROM node:22-alpine AS build
 # Install requirements for node-gyp
 RUN apk add --no-cache python3 make g++
 
+# Install pnpm
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
 # Prepare packages
 WORKDIR /usr/bot/
 COPY ["package.json", "pnpm-lock.yaml", "./"]

@@ -1,6 +1,7 @@
 {
     "name": "blox-it",
     "main": "src/bot.ts",
+    "packageManager": "pnpm@11.28.3",
     "engines": {
         "node": ">=22.0.0"
     },
