@@ -1,11 +1,7 @@
 FROM node:22-alpine AS build
 
 # Install requirements for node-gyp
-RUN apk add --no-cache python3 make g++ git
-
-# Python 3.12 dropped distutils - which node-gyp uses to build erlpack
-RUN python -m ensurepip
-RUN pip install --no-cache --upgrade pip setuptools
+RUN apk add --no-cache python3 py3-pip make g++ git
 
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
