@@ -5,12 +5,12 @@ RUN apk add --no-cache python3 make g++
 
 # Prepare packages
 WORKDIR /usr/bot/
-COPY ["package.json", "yarn.lock", "./"]
-RUN yarn install
+COPY ["package.json", "pnpm-lock.yaml", "./"]
+RUN pnpm install
 
 # Build
 COPY . .
-RUN yarn run build
+RUN pnpm run build
 
 #########
 # Runtime
