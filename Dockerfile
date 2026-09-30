@@ -1,8 +1,7 @@
 FROM node:22-alpine AS build
 
 # Install requirements for node-gyp
-RUN apk add --no-cache python3 py3-pip make g++ git
-RUN pip install --no-cache setuptools
+RUN apk add --no-cache python3 py3-setuptools make g++ git
 
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
