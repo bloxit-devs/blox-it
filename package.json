@@ -2,7 +2,7 @@
     "name": "blox-it",
     "main": "src/bot.ts",
     "engines": {
-        "node": ">=16.0.0 <19.0.0"
+        "node": ">=22.0.0"
     },
     "scripts": {
         "start": "node --optimize_for_size --gc_interval=100 --max_old_space_size=920 dist/bot.js",
