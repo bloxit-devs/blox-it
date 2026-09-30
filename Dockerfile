@@ -29,7 +29,6 @@ WORKDIR /usr/bot
 RUN mkdir ./data && chown -R 1000 ./data
 
 # Copy build files
-COPY package.json
 COPY --from=build --chown=1000 /usr/bot/dist ./
 COPY --from=build --chown=1000 /usr/bot/node_modules ./node_modules
 
